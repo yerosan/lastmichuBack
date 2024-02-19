@@ -13,6 +13,39 @@ const institute=sequelize.define("institute", {
         type:Sequelize.FLOAT,
         allowNull:false
     },
+    waterSupplyTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    transportTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    educationTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    telecomTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    governmentTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    entertainmentTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    cooperativeTrans:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
+    
+    transTotal:{
+        type:Sequelize.FLOAT,
+        allowNull:false
+    },
     waterSupply:{
         type:Sequelize.FLOAT,
         allowNull:false
@@ -29,7 +62,7 @@ const institute=sequelize.define("institute", {
         type:Sequelize.FLOAT,
         allowNull:false
     },
-    bill:{
+    government:{
         type:Sequelize.FLOAT,
         allowNull:false
     },
@@ -41,11 +74,7 @@ const institute=sequelize.define("institute", {
         type:Sequelize.FLOAT,
         allowNull:false
     },
-    gateWay:{
-        type:Sequelize.FLOAT,
-        allowNull:false
-    },
-    total:{
+    totalAmount:{
         type:Sequelize.FLOAT,
         allowNull:false
     }

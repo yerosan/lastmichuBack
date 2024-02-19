@@ -8,15 +8,23 @@ const addInstitute=(req, res)=>{
 
     try{
         if(!inputData.parteners || !inputData.waterSupply ||
-             !inputData.entertainment || !inputData.bill || 
+             !inputData.entertainment || !inputData.government || 
              !inputData.telecom || !inputData.cooperative||
-              !inputData.gateWay || !inputData.education || !inputData.transport){
+             !inputData.education || !inputData.transport|| 
+             !inputData.waterSupplyTrans ||
+             !inputData.entertainmentTrans || !inputData.governmentTrans || 
+             !inputData.telecomTrans || !inputData.cooperativeTrans||
+             !inputData.educationTrans || !inputData.transportTrans){
                 res.status(200).json({message:"All field is required"})
         }else{
-            const total=Number(inputData.waterSupply)+Number(inputData.transport)+Number(inputData.entertainment)+
-            Number(inputData.telecom)+Number(inputData.gateWay)+Number(inputData.cooperative)+Number(inputData.bill)+Number(inputData.education)
-            console.log("this is total", total)
-            inputData.total=total
+            const totalAmount=Number(inputData.waterSupply)+Number(inputData.transport)+Number(inputData.entertainment)+
+            Number(inputData.telecom)+Number(inputData.cooperative)+Number(inputData.government)+Number(inputData.education)
+            inputData.totalAmount=total
+
+            const totalTransactions=Number(inputData.waterSupplyTrans)+Number(inputData.transportTrans)+Number(inputData.entertainmentTrans)+
+            Number(inputData.telecomTrans)+Number(inputData.cooperativeTrans)+Number(inputData.governmentTrans)+Number(inputData.educationTrans)
+            inputData.totalTransactions=totalTransactions
+
             instituteModel.create(inputData).then(result=>{
                 if(result){
                     res.status(200).json({message:"succeed", data:result})
