@@ -1,0 +1,90 @@
+const { where } = require("sequelize")
+const roleModel=require("../models/roleModel")
+const userModel=require("../models/userModel")
+
+const addRole=async(req,res)=>{
+    const roleData=req.body
+
+    if(roleData.admin || roleData.collectionAdmin || roleData.operationalAdmin || roleData.salesAdim
+       || roleData.operationalUser || roleData.salesUser || roleData.collectionUser){
+
+        if(roleData.userName){
+           try{
+            roleModel.sync()
+            let user= await userModel.findOne({where:{userName:roleData.userName}})
+             if(user){
+                console.log('thi is user', user)
+                let checkUser= await roleModel.findOne({where:{userId:user.dataValues.userId}})
+                if(!checkUser){
+                    roleData.userId=user.dataValues.userId
+                   let creatingRole=await roleModel.create(roleData)
+                   res.status(200).json({message:"succed", data:creatingRole})
+                }else{
+                    res.status(200).json({message:"User already exist"})
+                }
+             }else{
+                res.status(200).json({message:"User doesn't exist"})
+             }
+           }catch(error){
+            console.log("an error", error)
+            res.status(500).json({message:"An internal error"})
+           }
+        }else{
+            res.status(200).json({message:'User Name required'})
+        }
+       
+    }else{
+        res.status(200).send("No role to create")
+    }
+
+}
+
+const updateRole=async(req, res)=>{
+    const updateData=req.body
+        if(updateData.userName){
+            try{
+                roleModel.sync()
+                let user=await userModel.findOne({where:{userName:updateData.userName}})
+                if(user){
+                    console.log("this is userID", user)
+                    let roleUpdate= await roleModel.update(updateData,{where:{userId:user.dataValues.userId}})
+                    console.log("this is userRole", roleUpdate)
+                    if(roleUpdate){
+                        res.status(200).json({message:"succed", data:roleUpdate})
+                    }
+                }else{
+                    res.status(200).json({message:"User doesn't exist"})
+                }
+                
+            }catch(error){
+                res.status(500).json({message:"An internal error"})
+                console.log("The Error", error)
+            }
+        }
+    
+
+}
+
+const rolePerUser=async(req,res)=>{
+    const userName= req.params.userName
+    try{
+        let user= await userModel.findOne({where:{userName:userName}})
+        if(user){
+            let userRole=await roleModel.findOne({where:{userId:user.dataValues.userId}})
+            if (userRole){
+                userRole.dataValues.userName=userName
+                res.status(200).json({message:"succed", data:userRole})
+            }else{
+                res.status(200).json({message:"Unable to given user role"})
+            }
+        }else{
+            res.status(200).json({message:"User doesn't exist"})
+        }
+    }catch(er){
+        res.status(500).json({message:"An internal error"})
+        console.log("An error", er)
+    }
+}
+
+
+module.exports={addRole, updateRole, rolePerUser}

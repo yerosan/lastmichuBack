@@ -8,18 +8,19 @@ const userInfo=sequelize.define("user_information",{
         primaryKey:true,
         allowNull:false
     },
-    userName:{
+    fullName:{
         type:Sequelize.STRING,
         allowNull:true,
+    },
+    userName:{
+        type:Sequelize.STRING,
+        allowNull:false
+
     },
     password:{
       type:Sequelize.STRING,
       allowNull:false
     },
-    role:{
-        type:Sequelize.STRING,
-        allowNull:false
-    }
 })
 
 module.exports=userInfo

@@ -2,7 +2,7 @@ const userModel=require("../models/userModel")
 const bcrypt=require("bcrypt")
 const jwt=require("jsonwebtoken")
 const dotenv=require("dotenv")
-const userInfo = require("../models/userModel")
+const { get } = require("../route/collectionRoute")
 dotenv.config()
 function createAccessToken(userName){
     console.log("this is secrity of controller", process.env.security_key)
@@ -13,25 +13,36 @@ const registerUser= async (req,res)=>{
      const userData=req.body
      console.log("this is path",req.body)
      const password=userData.password
-     if(!userData.password || !userData.userName || !userData.role){
-        res.status(400).json({message:"All field is required"})
+     if(!userData.password || !userData.confirmation || !userData.fullName || !userData.userName || !userData.role){
+        res.status(200).json({message:"All field are required"})
      }else{
      try{
+        userModel.sync()
         const user= await userModel.findOne({where:{userName:userData.userName}})
         if(user){
             res.status(200).json({message:"User already exist"})
          }
         else{
+            let checkPassword= userData.password===userData.confirmation
+            if(checkPassword){
             let payload={userName:userData.userName}
             let hashePassword=await bcrypt.hash(password, 10) 
-            const createUser=await userModel.create({userName:userData.userName,password:hashePassword,role:"admin"})
+            const createUser=await userModel.create({
+                    userName:userData.userName,
+                    fullName:userData.fullName,
+                    password:hashePassword,
+                    })
             if(createUser){
                 const token=createAccessToken(payload)
                 createUser.dataValues.token=token
-                res.status(201).json({message:"User registered successfully", data:createUser})
+                res.status(201).json({message:"succed", data:createUser})
             }else{
                 res.status(404).send("Unable to connect to db")
             }
+          }else{
+            console.log("password doesn't much")
+            res.status(200).json({message:"Password doesn't much"})
+          }
         }
      }catch(error){
         res.status(500).json({message:"An internal error"})
@@ -44,7 +55,7 @@ const loginUser=async(req, res)=>{
     const data=req.body
     console.log(data, "this is data")
     if (!data.userName || !data.password){
-        res.status(400).json({message:"All field is required"})
+        res.status(200).json({message:"All field are required"})
     }else{
         try{
             const user= await userModel.findOne({where:{userName:data.userName}})
@@ -56,10 +67,10 @@ const loginUser=async(req, res)=>{
                     user.dataValues.token=token
                     res.status(200).json({message:"succed",data:user})
                 }else{
-                    res.status(401).json({message:"Incorrect password"})
+                    res.status(200).json({message:"Incorrect password"})
                 }
             }else{
-                res.status(403).json({message:"User not found please register"})
+                res.status(200).json({message:"User not found please register"})
             }
 
         }catch(erro){
@@ -91,4 +102,18 @@ const addUser = async(req, res)=>{
     }
 }
 
-module.exports={registerUser,loginUser,addUser}
+const getUser=async(req, res)=>{
+    try{
+        let users=await userModel.findAll()
+        if(users.length>0){
+            res.status(200).json({message:"succeed", data:users})
+        }else{
+            res.status(200).json({message:"User data not found"})
+        }
+    }catch(error){
+        res.status(500).json({message:"Some thing went wrong"})
+        console.log("this is userError", error)
+    }
+}
+
+module.exports={registerUser,loginUser,addUser, getUser}
