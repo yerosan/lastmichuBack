@@ -10,7 +10,7 @@ const addColletionData=async(req, res)=>{
         !dataSet.customerPhone||
         !dataSet.callResponce
         ){ 
-            res.status(404).json({message:"All field is required"})
+            res.status(200).json({message:"All field is required"})
         }
     else{
         try{
@@ -41,10 +41,10 @@ const addColletionData=async(req, res)=>{
                 }
 
                 else{
-                    res.status(403).json({message:"unable to add data"})
+                    res.status(200).json({message:"unable to add data"})
                 }
             }else{
-                res.status(403).json({message:"user doesn't exist"})
+                res.status(200).json({message:"user doesn't exist"})
                 console.log("user doesn't exist")
             }
             
@@ -82,32 +82,32 @@ const CollectetionPerUser=async(req, res)=>{
                 userStatus.liveCollection=0
             }
             const perviousData=await performanceModel.findAll({where:{userId:user.dataValues.userId}})
-            console.log("this is a data", perviousData)
+            // console.log("this is a data", perviousData)
             if(perviousData.length>0){
                 perviousData.map((data)=>{
                     let day=new Date(data.dataValues.date)
-                    console.log("this is the month", day.getMonth(), previousMonth)
+                    // console.log("this is the month", day.getMonth(), previousMonth)
                     if (day.getMonth()+1==previousMonth && day.getFullYear()==previousYear){
                       theData.push(day)
                       userStatus.monthlyCollection +=data.collectedAmount
                     }
                     
-                    console.log("this is pervious Date", previousDate)
+                    // console.log("this is pervious Date", previousDate)
                 })
-                console.log("this is performancePerviousMonth", userStatus,theData)
+                // console.log("this is performancePerviousMonth", userStatus,theData)
             }
             lastDateData=await performanceModel.findAll({order:[["date", "DESC"]]})
             if(lastDateData.length>0){
                 lastDateData.map(data=>{
                     let dates= data.dataValues.date
                     if (dateList.includes(dates)){
-                        console.log("the date already exist", dateList)
+                        // console.log("the date already exist", dateList)
                     }else{
                     dateList.push(dates)
                     }
                 })
                 const uniqueDate=new Set(dateList)
-                console.log("this is theDataSet of UniqueDate", uniqueDate)
+                // console.log("this is theDataSet of UniqueDate", uniqueDate)
                 if(today==[...uniqueDate][0]){
                     previousDate=[...uniqueDate][1]
                     if(previousDate){
@@ -150,22 +150,74 @@ const CollectetionPerUser=async(req, res)=>{
     }
 }
 
+
+
+// const { Op } = require('sequelize');
+// const { YourModelName } = require('./models'); // Replace 'YourModelName' with your Sequelize model
+
+// const startDate = new Date('2022-01-01'); // Example start date
+// const endDate = new Date('2022-01-31'); // Example end date
+
+// // Query to count unique dates within the given date range
+// YourModelName.count({
+//   distinct: 'date', // Count distinct dates
+//   where: {
+//     date: {
+//       [Op.between]: [startDate, endDate], // Date range condition
+//     },
+//   },
+// }).then((count) => {
+//   console.log('Count of unique dates:', count);
+// }).catch((error) => {
+//   console.error('Error fetching count:', error);
+// });
+
+
+
+
 const totalCollectedPerDateRange=async(req, res)=>{
     const dateRange=req.body
+    console.log("The date range >>>>>>>>>>>>>>>>", dateRange)
     if(!dateRange.startDate|| !dateRange.endDate){
         res.status(200).json({message:"Date range is required"})
     }
 
     try{
         let collectionPerDate=await performanceModel.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+        let uniqueCustomers= await collectionController.findAll({where:{callResponce:{[Op.in]:["paid","payed"]},date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+        let uniqueDate=await collectionController.count({distinct:"date",where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+        let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
         let weeklyCollected={}
         let weeklytotal=0
+        let weeklyPerUser={}
         let userss=[]
         if (collectionPerDate.length>0){
+            console.log("===========````````````````Unique Date Count``````````````````=================",uniqueDate, "IN", "---------DateRange--------", dateRange)
+            console.log("===========````````````````Unique Date``````````````````=================",uniqueDay, "IN", "---------DateRange--------", dateRange)
              collectionPerDate.map(collection=>{
                 weeklytotal +=collection.dataValues.collectedAmount
                 userss.push(collection.dataValues.userId)
              })
+            if(uniqueDay.length>0){
+                let Dates=uniqueDay.map((days)=>(
+                     days.dataValues.date
+            ))
+                console.log("************Days***********", Dates)
+                let ate=[...new Set(Dates)]
+                console.log("************UniqueDays***********", ate.length)
+                weeklyCollected.workingDay=ate.length
+            }
+
+            if(uniqueCustomers.length){
+                let customers=uniqueCustomers.map((customer)=>(
+                    customer.dataValues.customerPhone
+                    
+                ))
+
+                console.log("************-----------Customers--------***********", customers)
+                weeklyCollected.totalAccount=customers.length
+            }
+
             let uniqueUserss=new Set(userss)
             let userrs=[...uniqueUserss]
             await Promise.all(userrs.map(async Id=>{
@@ -174,15 +226,17 @@ const totalCollectedPerDateRange=async(req, res)=>{
                 let IdUser= await userModel.findOne({where:{userId:Id}})
                 let name=IdUser.dataValues.userName
                 if (collectionPeruserID.length>0){
+                    console.log("===========````````````````Unique customers``````````````````=================",uniqueCustomers.length)
                     collectionPeruserID.map(amount=>{
                         dateRangeCollectionPerUser += amount.dataValues.collectedAmount
                     })
-                    weeklyCollected[`${name}`]=dateRangeCollectionPerUser
+                    weeklyPerUser[`${name}`]=dateRangeCollectionPerUser
                 }else{
-                    weeklyCollected[`${name}`]=dateRangeCollectionPerUser  
+                    weeklyPerUser[`${name}`]=dateRangeCollectionPerUser  
                 }
             }))
             weeklyCollected.dateRangeTotal=weeklytotal
+            weeklyCollected.PerUser=weeklyPerUser
             res.status(200).json({message:"succed", data:weeklyCollected})
         }
         else{
@@ -192,6 +246,8 @@ const totalCollectedPerDateRange=async(req, res)=>{
         console.log("this is an error", error)
         res.status(500).json({message:"An internal error"})
     }
+
+    console.log("The date range >>>>>>>>>>>>>>>>", dateRange)
 }
 
 const totalCollectedPeruser=async(req,res)=>{
