@@ -2,10 +2,13 @@ const CollectionModel = require("../models/CollectionModel")
 const collectionController=require("../models/CollectionModel")
 const userModel=require("../models/userModel")
 const performanceModel=require("../models/collectionPerformance")
+const sequelize=require("sequelize")
 const { where,Op } = require("sequelize")
+const { raw } = require("body-parser")
 
 const addColletionData=async(req, res)=>{
     const dataSet=req.body
+    console.log("this is FormData----------------",dataSet)
     if(!dataSet.userName || 
         !dataSet.customerPhone||
         !dataSet.callResponce
@@ -23,7 +26,7 @@ const addColletionData=async(req, res)=>{
                 performanceModel.sync()
                 const userPerDate= await performanceModel.findOne({where:{userId:userData.dataValues.userId,date:today}})
                 if(addCollection){
-                    if(addCollection.dataValues.payedAmount !=0){
+                    if(addCollection.dataValues.payedAmount >0){
                        if(userPerDate){
                         let collectedAmounts=userPerDate.dataValues.collectedAmount+addCollection.dataValues.payedAmount
                         await performanceModel.update({collectedAmount:collectedAmounts},{where:{userId:userPerDate.dataValues.userId,date:today}})
@@ -37,10 +40,11 @@ const addColletionData=async(req, res)=>{
                         await performanceModel.create(todayData)
                         res.status(200).json({message:"succed", data:addCollection})
                        }
+                    }else{
+                        res.status(200).json({message:"succed", data:addCollection})
+                        console.log("Data with un paid===============", addCollection)
                     }
-                }
-
-                else{
+                }else{
                     res.status(200).json({message:"unable to add data"})
                 }
             }else{
@@ -75,11 +79,16 @@ const CollectetionPerUser=async(req, res)=>{
         let user= await userModel.findOne({where:{userName:userName}})
         if(user){
             let liveCollection= await performanceModel.findOne({where:{userId:user.dataValues.userId, date:today}})
+            let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:today, callResponce:{[Op.in]:['paid', "payed"]}}})
+            userStatus.liveAccount=liveAccount
             if(liveCollection){
-                userStatus.liveCollection=liveCollection.dataValues.collectedAmount
+            userStatus.liveCollection=liveCollection.dataValues.collectedAmount
+            // userStatus.liveAccount=liveAccount
+            // console.log("<<<<<<<<<<<Live>>>>>>>>", liveAccount, liveCollection)
             }else{
                 console.log("No live record")
                 userStatus.liveCollection=0
+                // userStatus.liveAccount=0
             }
             const perviousData=await performanceModel.findAll({where:{userId:user.dataValues.userId}})
             // console.log("this is a data", perviousData)
@@ -107,70 +116,61 @@ const CollectetionPerUser=async(req, res)=>{
                     }
                 })
                 const uniqueDate=new Set(dateList)
-                // console.log("this is theDataSet of UniqueDate", uniqueDate)
+                // console.log("----------------------this is theDataSet of UniqueDate----------------", uniqueDate)
                 if(today==[...uniqueDate][0]){
                     previousDate=[...uniqueDate][1]
+                    // console.log("----------------------==========this is theDataSet of UniqueDate----------------", uniqueDate)
+                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:{[Op.in]:['paid', "payed"]}}})
+                    userStatus.previousAccount=previousAccount
                     if(previousDate){
                         let yesterdayColletion= await performanceModel.findOne({where:{userId:user.dataValues.userId, date:previousDate}})
                         if(yesterdayColletion){
                             userStatus.previousColletion=yesterdayColletion.dataValues.collectedAmount
+                            // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
                             res.status(200).json({message:"succed", data:userStatus})
                         }else{
                             userStatus.previousColletion=0
+                            // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
                             res.status(200).json({message:"succed", data:userStatus})
-
                         }
                     }
                     else{
                         userStatus.previousColletion=0
+                        // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
                         res.status(200).json({message:"succed", data:userStatus})
                     }
 
                 }else{
                     previousDate=[...uniqueDate][0]
+                    // console.log("----------------------;;;;;;;;;;;;;;this is theDataSet of UniqueDate----------------", uniqueDate)
                     let yesterdayColletion= await performanceModel.findOne({where:{userId:user.dataValues.userId,date:previousDate}})
+                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:{[Op.in]:['paid', "payed"]}}})
+                    userStatus.previousAccount=previousAccount
                     if(yesterdayColletion){
                         userStatus.previousColletion=yesterdayColletion.dataValues.collectedAmount
+                        // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
                         res.status(200).json({message:"succed", data:userStatus})
                     }else{
                         userStatus.previousColletion=0
                         res.status(200).json({message:"succed", data:userStatus})
+                        // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
+                        
                     }
                 }
            }else{
                 userStatus.previousColletion=0
                 res.status(200).json({message:"succed", data:userStatus})
+                // console.log("################################## ======''''''''''''''''=====````````````````PreviousCollection}}}}}}}}}}}}}}}]``````````````````",userStatus)
            }
         }else{
-            console.log("User doesn't exist")
+            console.log("user doesn't exist")
+            res.status(200).json({message:"User doesn't exist"})
         }
     }catch(error){
         console.log("this is an error", error)
         res.status(500).json({message:"An internal error"})
     }
 }
-
-
-
-// const { Op } = require('sequelize');
-// const { YourModelName } = require('./models'); // Replace 'YourModelName' with your Sequelize model
-
-// const startDate = new Date('2022-01-01'); // Example start date
-// const endDate = new Date('2022-01-31'); // Example end date
-
-// // Query to count unique dates within the given date range
-// YourModelName.count({
-//   distinct: 'date', // Count distinct dates
-//   where: {
-//     date: {
-//       [Op.between]: [startDate, endDate], // Date range condition
-//     },
-//   },
-// }).then((count) => {
-//   console.log('Count of unique dates:', count);
-// }).catch((error) => {
-//   console.error('Error fetching count:', error);
-// });
 
 
 
@@ -187,13 +187,45 @@ const totalCollectedPerDateRange=async(req, res)=>{
         let uniqueCustomers= await collectionController.findAll({where:{callResponce:{[Op.in]:["paid","payed"]},date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
         let uniqueDate=await collectionController.count({distinct:"date",where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
         let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+        let totalAmount=await collectionController.findAll({
+            attributes: [
+              [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+            ],
+            raw:true
+          })
+        let givenDateTotalAmount=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+        attributes: [
+            [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+        ],
+        raw:true
+        })
+        let collectionDate= await collectionController.findAll({
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('date')), "uniqueDate"]],
+        raw: true // Get raw data instead of Sequelize instances
+        })
+
+        let allCustomer=await collectionController.count({"DISTINCT":"customerPhone", where:{callResponce:{[Op.in]:['paid', "payed"]}}})
+        let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:"2024-04-15", callResponce:{[Op.in]:['paid', "payed"]}}})
+        let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:"2024-04-16", callResponce:{[Op.in]:['paid', "payed"]}}})
+
+        // YourModel.findAll({
+        //     attributes: [[sequelize.fn('DISTINCT', sequelize.col('columnName')), 'uniqueValues']],
+        //     raw: true // Get raw data instead of Sequelize instances
+        //   })
         let weeklyCollected={}
         let weeklytotal=0
         let weeklyPerUser={}
         let userss=[]
         if (collectionPerDate.length>0){
-            console.log("===========````````````````Unique Date Count``````````````````=================",uniqueDate, "IN", "---------DateRange--------", dateRange)
-            console.log("===========````````````````Unique Date``````````````````=================",uniqueDay, "IN", "---------DateRange--------", dateRange)
+            // console.log("===========````````````````Unique Date Count``````````````````=================",uniqueDate, "IN", "---------DateRange--------", dateRange)
+            // console.log("===========````````````````Unique Date``````````````````=================",uniqueDay, "IN", "---------DateRange--------", dateRange)
+            // console.log("===========````````````````TotalCollected Amount``````````````````=================",totalAmount, "IN", "---------Untill today--------")
+            // console.log("===========````````````````GivenDateTotalAmount``````````````````=================",givenDateTotalAmount, "IN", "---------Untill today--------")
+            // console.log(";;;;;;;The unique collectionDate;;;;;;;;;;;;;",collectionDate,"''''''''''''", collectionDate.length)
+            // console.log(";;;;;;;all customer;;;;;;;;;;;;;",allCustomer,"''''''''''''")
+            // console.log(";;;;;;;PreviousCollection;;;;;;;;;;;;;",previousAccount,"''''''''''''")
+            // console.log(";;;;;;;PreviousCollection;;;;;;;;;;;;;",liveAccount,"''''''''''''")
+
              collectionPerDate.map(collection=>{
                 weeklytotal +=collection.dataValues.collectedAmount
                 userss.push(collection.dataValues.userId)
@@ -237,6 +269,10 @@ const totalCollectedPerDateRange=async(req, res)=>{
             }))
             weeklyCollected.dateRangeTotal=weeklytotal
             weeklyCollected.PerUser=weeklyPerUser
+            weeklyCollected.up_to_DateTotalCollection=totalAmount[0].totalSum
+            weeklyCollected.up_to_DateTotalAccount=allCustomer
+            weeklyCollected.up_to_DateWorkingDay=collectionDate.length
+            weeklyCollected.GivenDateAmount=givenDateTotalAmount[0].totalSum
             res.status(200).json({message:"succed", data:weeklyCollected})
         }
         else{
@@ -478,4 +514,228 @@ const deleteUser=async(req, res)=>{
         res.status(500).send("An error")
     }
 }
-module.exports={addColletionData, totalCollectedPeruser, collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange}
+
+const totalCustomerPerUser=async(req, res)=>{
+    const dateRange=req.body
+    const userCollectionData=[]
+    try{
+        let user= await userModel.findAll()
+        if(user.length>0){
+            let totalCustomer= [await Promise.all (user.map(async userid=>{
+                let userHistory={userName:userid.dataValues.userName, fullName:userid.dataValues.fullName}
+                console.log("this is user",userHistory)
+                let userId=userid.dataValues.userId
+                let customerCount=await collectionController.count(
+                    {where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+                    callResponce:{[Op.in]:["payed","paid"]}}})
+                let totalAmount=await collectionController.findAll({where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                    attributes: [
+                      [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                    ],
+                    raw:true
+                  })
+                let customertotal=await collectionController.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                if(customertotal.length>0){
+                    userHistory.totalPaid=customerCount
+                    userHistory.totalCustomer=customertotal.length
+                    userHistory.totalUnpaid=customertotal.length-customerCount
+                    userHistory.totalCollectedAmount=totalAmount[0].totalSum
+                }else{
+                    userHistory.totalPaid=0
+                    userHistory.totalCustomer=0
+                    userHistory.totalUnpaid=0
+                    userHistory.totalCollectedAmount=0
+                }
+                console.log("Status>>>>>>>>>>>>>>>", userHistory)
+                userCollectionData.push(userHistory)
+            }))]
+            res.status(200).json({message:"succeed", data:userCollectionData})
+
+            console.log("The total Customers", totalCustomer)
+        }else{
+            res.status(200).json({message:"No registerd ures"})
+        }
+    }
+    catch(error){
+        console.log("the error", error)
+        res.status(500).json({message:"An internal error"})
+    }
+}
+
+
+const totalcollectionDashboard=async(req, res)=>{
+    const dateRange=req.body
+    const collectionData=[]
+    const userCollectionData=[]
+    try{
+        if (! dateRange.startDate){
+             let collectionStart= await collectionController.findOne({order:[["Date","ASC"]]})
+             if (collectionStart){
+                dateRange.startDate=collectionStart.dataValues.date
+
+                let cardData={}
+                let userHistory={}
+                let user= await userModel.findAll()
+                let allCustomer=await collectionController.count({"DISTINCT":"customerPhone", where:{callResponce:{[Op.in]:["paid","payed"]},date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                let totalAmount=await collectionController.findAll({ where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                    attributes: [
+                    [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                    ],
+                    raw:true
+                })
+
+                if(uniqueDay.length>0){
+                    let Dates=uniqueDay.map((days)=>(
+                        days.dataValues.date
+                ))
+                    console.log("************Days***********", Dates)
+                    let ate=[...new Set(Dates)]
+                    console.log("************UniqueDays***********", ate.length)
+                    // weeklyCollected.workingDay=ate.length
+                    cardData.workingDay=ate.length
+                }else{
+                    cardData.workingDay=1
+                }
+
+                cardData.totalAccounts=allCustomer
+                cardData.totalCollecteds=totalAmount[0].totalSum
+
+                let rangedCollection=[cardData]
+
+
+
+                if(user.length>0){
+                    let totalCustomer= [await Promise.all (user.map(async userid=>{
+                        let fullName=userid.dataValues.fullName
+                        console.log("this is user",userHistory)
+                        let userId=userid.dataValues.userId
+                        // res.status(200).json({message:"succeed", data:userid})
+                        let customerCount=await collectionController.count(
+                            {where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+                            callResponce:{[Op.in]:["payed","paid"]}}})
+                        let totalAmount=await collectionController.findAll({where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                            // date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+                            attributes: [
+                            [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                            ],
+                            raw:true
+                        })
+                        let customertotal=await collectionController.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                        if(customertotal.length>0){
+                            userHistory[fullName]=totalAmount[0].totalSum
+                        }else{
+                            userHistory[fullName]=0
+                        }
+                        console.log("Status>>>>>>>>>>>>>>>", userHistory)
+                    }))]
+                    userCollectionData.push(userHistory)
+                    collectionData.push(rangedCollection)
+                    collectionData.push(userCollectionData)
+                    res.status(200).json({message:"succeed", data:collectionData})
+
+                    console.log("The total Customers", totalCustomer)
+                }else{
+                    res.status(200).json({message:"No registerd ures"})
+                }
+                
+             }else{
+                res.status(200).json({message:"Unable to get startDate"})
+             }
+        }else{
+            let cardData={}
+            let userHistory={}
+            let user= await userModel.findAll()
+            let allCustomer=await collectionController.count({"DISTINCT":"customerPhone", where:{callResponce:{[Op.in]:["paid","payed"]},date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+            let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+            let totalAmount=await collectionController.findAll({ where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                attributes: [
+                [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                ],
+                raw:true
+            })
+
+            if(uniqueDay.length>0){
+                let Dates=uniqueDay.map((days)=>(
+                    days.dataValues.date
+            ))
+                console.log("************Days***********", Dates)
+                let ate=[...new Set(Dates)]
+                console.log("************UniqueDays***********", ate.length)
+                // weeklyCollected.workingDay=ate.length
+                cardData.workingDay=ate.length
+            }else{
+                cardData.workingDay=1
+            }
+
+            cardData.totalAccounts=allCustomer
+            cardData.totalCollecteds=totalAmount[0].totalSum
+
+            let rangedCollection=[cardData]
+
+
+
+            if(user.length>0){
+                let totalCustomer= [await Promise.all (user.map(async userid=>{
+                    let fullName=userid.dataValues.fullName
+                    console.log("this is user",userHistory)
+                    let userId=userid.dataValues.userId
+                    // res.status(200).json({message:"succeed", data:userid})
+                    let customerCount=await collectionController.count(
+                        {where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+                        callResponce:{[Op.in]:["payed","paid"]}}})
+                    let totalAmount=await collectionController.findAll({where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                        // date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+                        attributes: [
+                        [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                        ],
+                        raw:true
+                    })
+                    let customertotal=await collectionController.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                    if(customertotal.length>0){
+                        userHistory[fullName]=totalAmount[0].totalSum
+                    }else{
+                        userHistory[fullName]=0
+                    }
+                    userCollectionData.push(userHistory)
+                }))]
+                collectionData.push(rangedCollection)
+                collectionData.push(userCollectionData)
+                res.status(200).json({message:"succeed", data:collectionData})
+
+                console.log("The total Customers", totalCustomer)
+            }else{
+                res.status(200).json({message:"No registerd ures"})
+            }
+       }
+    }
+    catch(error){
+        console.log("the error", error)
+        res.status(500).json({message:"An internal error"})
+    }
+}
+
+
+const allCollection= async(req, res)=>{
+    try{
+        const allCollection =await collectionController.findAll()
+        if(allCollection.length>0){
+            await Promise.all(allCollection.map(async collectionData=>{
+               let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
+               if(user){
+                console.log("The usersDATa------------", user)
+                collectionData.dataValues.userName=user.dataValues.userName
+                collectionData.dataValues.fullName=user.dataValues.fullName
+               }
+            }))
+          res.status(200).json({message:"succeed", data:allCollection})
+        }else{
+            console.log("No data")
+            res.status(200).json({message:"Data doesn't exist"})
+        }
+    }catch(error){
+     console.log("The error", error)
+     res.status(500).json({message:"An internal error"})
+    }
+}
+module.exports={addColletionData,allCollection, totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser, collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange}

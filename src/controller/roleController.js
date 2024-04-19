@@ -5,8 +5,8 @@ const userModel=require("../models/userModel")
 const addRole=async(req,res)=>{
     const roleData=req.body
 
-    if(roleData.admin || roleData.collectionAdmin || roleData.operationalAdmin || roleData.salesAdim
-       || roleData.operationalUser || roleData.salesUser || roleData.collectionUser){
+    // if(roleData.admin || roleData.collectionAdmin || roleData.operationalAdmin || roleData.salesAdim
+    //    || roleData.operationalUser || roleData.salesUser || roleData.collectionUser){
 
         if(roleData.userName){
            try{
@@ -32,35 +32,30 @@ const addRole=async(req,res)=>{
         }else{
             res.status(200).json({message:'User Name required'})
         }
-       
-    }else{
-        res.status(200).send("No role to create")
-    }
 
 }
 
 const updateRole=async(req, res)=>{
     const updateData=req.body
-        if(updateData.userName){
-            try{
-                roleModel.sync()
-                let user=await userModel.findOne({where:{userName:updateData.userName}})
-                if(user){
-                    console.log("this is userID", user)
-                    let roleUpdate= await roleModel.update(updateData,{where:{userId:user.dataValues.userId}})
-                    console.log("this is userRole", roleUpdate)
-                    if(roleUpdate){
-                        res.status(200).json({message:"succed", data:roleUpdate})
-                    }
-                }else{
-                    res.status(200).json({message:"User doesn't exist"})
-                }
-                
-            }catch(error){
-                res.status(500).json({message:"An internal error"})
-                console.log("The Error", error)
+    try{
+        if(updateData.userId){
+                // roleModel.sync()
+                // let user=await userModel.findOne({where:{userName:updateData.userName}})
+            // console.log("this is userID", user)
+            let roleUpdate= await roleModel.update(updateData,{where:{userId:updateData.userId}})
+            console.log("this is userRole", roleUpdate)
+            if(roleUpdate){
+                res.status(200).json({message:"succeed", data:roleUpdate})
             }
+                
+            
+        }else{
+            res.status(200).json({message:'Unable to find uerId'})
         }
+    }catch(error){
+        res.status(500).json({message:"An internal error"})
+        console.log("The Error", error)
+    }
     
 
 }
@@ -73,9 +68,9 @@ const rolePerUser=async(req,res)=>{
             let userRole=await roleModel.findOne({where:{userId:user.dataValues.userId}})
             if (userRole){
                 userRole.dataValues.userName=userName
-                res.status(200).json({message:"succed", data:userRole})
+                res.status(200).json({message:"succeed", data:userRole})
             }else{
-                res.status(200).json({message:"Unable to given user role"})
+                res.status(200).json({message:"Unable to access role history"})
             }
         }else{
             res.status(200).json({message:"User doesn't exist"})

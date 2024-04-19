@@ -24,7 +24,7 @@ const CollectionModel=sequelize.define("Collection_data",{
     paymentStatus:{
         type:Sequelize.STRING,
         allowNull:false,
-        defaultValue:'Not yet'
+        defaultValue:'notPaid'
     },
     payedAmount:{
         type:Sequelize.FLOAT,
