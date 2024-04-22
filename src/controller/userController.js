@@ -3,6 +3,7 @@ const bcrypt=require("bcrypt")
 const jwt=require("jsonwebtoken")
 const dotenv=require("dotenv")
 const { get } = require("../route/collectionRoute")
+const { where } = require("sequelize")
 dotenv.config()
 function createAccessToken(userName){
     console.log("this is secrity of controller", process.env.security_key)
@@ -40,7 +41,7 @@ const registerUser= async (req,res)=>{
                 res.status(404).send("Unable to connect to db")
             }
           }else{
-            console.log("password doesn't much")
+            console.log("password doesn't match")
             res.status(200).json({message:"Password doesn't much"})
           }
         }
@@ -116,4 +117,40 @@ const getUser=async(req, res)=>{
     }
 }
 
-module.exports={registerUser,loginUser,addUser, getUser}
+const changePassword= async(req, res)=>{
+    previData=req.body
+    if (!previData.userName|| !previData.oldPassword || !previData.newPassword || !previData.confirmation){
+        res.status(200).json({message:"All field is required"})
+    }else{
+    try{
+        await userModel.sync()
+        let user= await userModel.findOne({where:{userName:previData.userName}})
+        console.log("the user----", user)
+        if(user){
+            if(await bcrypt.compare(previData.oldPassword,user.dataValues.password)){
+               if(previData.newPassword===previData.confirmation){
+                  let hasheNewPassword= await bcrypt.hash(previData.newPassword, 10) 
+                  let update= await userModel.update({password:hasheNewPassword}, {where:{userId:user.dataValues.userId}})
+                  if(update){
+                    res.status(200).json({message:"succeed", data:update})
+                  }else{
+                    res.status(200).json({message:"Unable to change password"})
+                  }
+               }else{
+                res.status(200).json({message:"Make sure your new password match"})
+               }
+               
+            }else{
+                res.status(200).json({message:"Old password is incorrect"})
+            }
+        }else{
+            res.status(200).json({message:"Unable to find user"})
+        }
+    }catch(error){
+        console.log("The error", error)
+        res.status(200).json({message:"An internal error"})
+    }
+}
+}
+
+module.exports={registerUser,loginUser,changePassword,addUser, getUser}

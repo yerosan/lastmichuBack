@@ -14,7 +14,7 @@ const CollectionModel=sequelize.define("Collection_data",{
         allowNull:false
     },
     customerPhone:{
-        type:Sequelize.INTEGER,
+        type:Sequelize.STRING,
         allowNull:false,
     },
     callResponce:{

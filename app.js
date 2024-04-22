@@ -24,14 +24,18 @@ cdkSequelize.authenticate().then(()=>{
     console.log("An internal error",error)
 })
 
-app.use(cors(), function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept"
-    );
-    next();
-}
+app.use(cors({
+    origin: "http://localhost:5173", // Replace with your frontend origin
+    credentials: true // Allow credentials (cookies, authorization headers, etc.)
+})
+// , function(req, res, next) {
+//     res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+//     res.header(
+//       "Access-Control-Allow-Headers",
+//       "Origin, X-Requested-With, Content-Type, Accept"
+//     );
+//     next();
+
 );
 // app.use(auth)
 
