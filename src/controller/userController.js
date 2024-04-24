@@ -6,13 +6,10 @@ const { get } = require("../route/collectionRoute")
 const { where } = require("sequelize")
 dotenv.config()
 function createAccessToken(userName){
-    console.log("this is secrity of controller", process.env.security_key)
     return jwt.sign(userName,process.env.security_key,{expiresIn:"86400s"})
 }
 const registerUser= async (req,res)=>{
-     console.log("this is path",req.path)
      const userData=req.body
-     console.log("this is path",req.body)
      const password=userData.password
      if(!userData.password || !userData.confirmation || !userData.fullName || !userData.userName || !userData.role){
         res.status(200).json({message:"All field are required"})
@@ -41,7 +38,6 @@ const registerUser= async (req,res)=>{
                 res.status(404).send("Unable to connect to db")
             }
           }else{
-            console.log("password doesn't match")
             res.status(200).json({message:"Password doesn't much"})
           }
         }
@@ -51,16 +47,13 @@ const registerUser= async (req,res)=>{
      }
     }
 }
-// { userName: '0912121220', password: 'jal!22' }
 const loginUser=async(req, res)=>{
     const data=req.body
-    console.log(data, "this is data")
     if (!data.userName || !data.password){
         res.status(200).json({message:"All field are required"})
     }else{
         try{
             const user= await userModel.findOne({where:{userName:data.userName}})
-            console.log("this is info", user)
             if(user){
                 if(await bcrypt.compare(data.password,user.dataValues.password)){
                     payload={userName:user.dataValues.userName}
@@ -99,6 +92,7 @@ const addUser = async(req, res)=>{
         }
       }catch(err){
         console.log("An error",err)
+        res.status(200).json({message:"An internal error"})
       }
     }
 }
@@ -125,7 +119,6 @@ const changePassword= async(req, res)=>{
     try{
         await userModel.sync()
         let user= await userModel.findOne({where:{userName:previData.userName}})
-        console.log("the user----", user)
         if(user){
             if(await bcrypt.compare(previData.oldPassword,user.dataValues.password)){
                if(previData.newPassword===previData.confirmation){

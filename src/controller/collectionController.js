@@ -8,7 +8,6 @@ const { raw } = require("body-parser")
 const moment = require('moment'); // For date manipulation
 const addColletionData=async(req, res)=>{
     const dataSet=req.body
-    console.log("this is FormData----------------",dataSet)
     if(!dataSet.userName || 
         !dataSet.customerPhone||
         !dataSet.callResponce ||
@@ -24,65 +23,26 @@ const addColletionData=async(req, res)=>{
                 await collectionController.sync()
                 let todayCollection= await collectionController.findOne({where:{date:dataSet.date, 
                     customerPhone:dataSet.customerPhone, userId:dataSet.userId}})
-                    console.log("This is the data ________",todayCollection )
                 if(todayCollection){
                     if(dataSet.callResponce !=="paid" && todayCollection.dataValues.callResponce =="paid"){
                         let updatedPayment=Number(dataSet.payedAmount)
-                        console.log("PaymentUpdated---", updatedPayment)
                         dataSet.payedAmount=updatedPayment
                         const addCollection= await collectionController.create(dataSet, {where:{userId:userData.dataValues.userId}})
-                        console.log("---------------", addCollection)
                         if(addCollection){
-                            let today=dataSet.date
+                            // let today=dataSet.date
                             await performanceModel.sync()
-                            const userPerDate= await performanceModel.findOne({where:{userId:userData.dataValues.userId,date:today}})
-                            if(dataSet.payedAmount >0){
-                            if(userPerDate){
-                                let collectedAmounts=userPerDate.dataValues.collectedAmount+dataSet.payedAmount
-                                await performanceModel.update({collectedAmount:collectedAmounts},{where:{userId:userPerDate.dataValues.userId,date:today}})
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
-                            else{
-                                let todayData={userId:userData.dataValues.userId,
-                                    collectedAmount:dataSet.payedAmount,
-                                    date:dataSet.date
-                                }
-                                await performanceModel.create(todayData)
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
-                            }else{
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
+                            res.status(200).json({message:"succed", data:addCollection})
                         }else{
                             res.status(200).json({message:"unable to add data"})
                         }
                     }else{
                         let updatedPayment= Number(todayCollection.dataValues.payedAmount)+Number(dataSet.payedAmount)
-                        console.log("PaymentUpdated---", updatedPayment)
                         dataSet.payedAmount=updatedPayment
                         const addCollection= await collectionController.update(dataSet, {where:{userId:userData.dataValues.userId, collectionId:todayCollection.dataValues.collectionId}})
-                        console.log("---------------", addCollection)
                         if(addCollection){
-                            let today=dataSet.date
+                            // let today=dataSet.date
                             await performanceModel.sync()
-                            const userPerDate= await performanceModel.findOne({where:{userId:userData.dataValues.userId,date:today}})
-                            if(dataSet.payedAmount >0){
-                            if(userPerDate){
-                                let collectedAmounts=userPerDate.dataValues.collectedAmount+dataSet.payedAmount
-                                await performanceModel.update({collectedAmount:collectedAmounts},{where:{userId:userPerDate.dataValues.userId,date:today}})
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
-                            else{
-                                let todayData={userId:userData.dataValues.userId,
-                                    collectedAmount:dataSet.payedAmount,
-                                    date:dataSet.date
-                                }
-                                await performanceModel.create(todayData)
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
-                            }else{
-                                res.status(200).json({message:"succed", data:addCollection})
-                            }
+                             res.status(200).json({message:"succed", data:addCollection})
                         }else{
                             res.status(200).json({message:"unable to add data"})
                         }
@@ -91,26 +51,9 @@ const addColletionData=async(req, res)=>{
                 }else{
                     const addCollection= await collectionController.create(dataSet)
                     let today=dataSet.date
-                    await performanceModel.sync()
                     const userPerDate= await performanceModel.findOne({where:{userId:userData.dataValues.userId,date:today}})
                     if(addCollection){
-                        if(dataSet.payedAmount >0){
-                           if(userPerDate){
-                            let collectedAmounts=userPerDate.dataValues.collectedAmount+dataSet.payedAmount
-                            await performanceModel.update({collectedAmount:collectedAmounts},{where:{userId:userPerDate.dataValues.userId,date:today}})
-                            res.status(200).json({message:"succed", data:addCollection})
-                           }
-                           else{
-                            let todayData={userId:userData.dataValues.userId,
-                                collectedAmount:dataSet.payedAmount,
-                                date:dataSet.date
-                            }
-                            await performanceModel.create(todayData)
-                            res.status(200).json({message:"succed", data:addCollection})
-                           }
-                        }else{
-                            res.status(200).json({message:"succed", data:addCollection})
-                        }
+                        res.status(200).json({message:"succed", data:addCollection})
                     }else{
                         res.status(200).json({message:"unable to add data"})
                     }
@@ -145,9 +88,8 @@ const CollectetionPerUser=async(req, res)=>{
     try{
         let user= await userModel.findOne({where:{userName:userName}})
         if(user){
-            await performanceModel.sync()
+            // await performanceModel.sync()
             await collectionController.sync()
-            // let liveCollections= await performanceModel.findOne({where:{userId:user.dataValues.userId, date:today}})
             let liveCollection=await collectionController.findAll({where:{date:today, userId:user.dataValues.userId},
                 attributes: [
                     [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
@@ -157,7 +99,6 @@ const CollectetionPerUser=async(req, res)=>{
             let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:today, callResponce:"paid"}})
             userStatus.liveAccount=liveAccount
             if(liveCollection[0].totalSum){
-            // userStatus.liveCollection=liveCollection.dataValues.collectedAmount
             userStatus.liveCollection=liveCollection[0].totalSum
             }else{
                 userStatus.liveCollection=0
@@ -174,7 +115,6 @@ const CollectetionPerUser=async(req, res)=>{
                 })
             const valuesOnly = collectionDate.map(item => item.uniqueDate);
             const sortedValues = valuesOnly.sort((a, b) => new Date(b)-new Date(a));
-            // console.log("Sorted----------------", valuesOnly, new Set(sortedValues))
             lastDateData=await collectionController.findAll({order:[["date", "DESC"]]})
             if(lastDateData.length>0){
                 if(today==sortedValues[0]){
@@ -243,9 +183,8 @@ const totalCollectedPerDateRange=async(req, res)=>{
     }
 
     try{
-        await performanceModel.sync()
+        // await performanceModel.sync()
         await collectionController.sync()
-        // let collectionPerDate=await performanceModel.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
         let collectionPerDate=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
             attributes: [
                 [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
@@ -253,7 +192,6 @@ const totalCollectedPerDateRange=async(req, res)=>{
             raw:true
             })
         let uniqueCustomers= await collectionController.findAll({where:{callResponce:"paid",date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
-        // let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
         let totalAmount=await collectionController.findAll({
             attributes: [
               [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
@@ -281,12 +219,12 @@ const totalCollectedPerDateRange=async(req, res)=>{
                 raw: true // Get raw data instead of Sequelize instances
                 })
             const userOnly = collectionUsers.map(item => item.uniqueDate);
-            console.log("ThsUdsrta----------", userOnly)
 
             let dateRangeWorkingday= await collectionController.findAll({ where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                 attributes: [[sequelize.fn('DISTINCT', sequelize.col('date')), "uniqueDate"]],
                 raw: true // Get raw data instead of Sequelize instances
                 })
+
             
             totalCollectionStat.workingDay=dateRangeWorkingday.length
             // }
@@ -300,11 +238,8 @@ const totalCollectedPerDateRange=async(req, res)=>{
                 totalCollectionStat.totalAccount=customers.length
             }
 
-            // let uniqueUserss=new Set(userss)
-            // let userrs=[...uniqueUserss]
             await Promise.all(userOnly.map(async Id=>{
                 let dateRangeCollectionPerUser=0
-                // let collectionPeruserID=await performanceModel.findAll({where:{userId:Id,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
                 let collectionPeruserID=await collectionController.findAll({where:{userId:Id,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                     attributes: [
                         [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
@@ -332,6 +267,7 @@ const totalCollectedPerDateRange=async(req, res)=>{
             res.status(200).json({message:"No collection Data in given date"})
         }
     }catch(error){
+        console.log("The error", error)
         res.status(500).json({message:"An internal error"})
     }
 }
@@ -354,7 +290,7 @@ const totalCollectedPeruser=async(req,res)=>{
         const userStatus={}
         if(userData){
             await collectionController.sync()
-            await performanceModel.sync()
+            // await performanceModel.sync()
             const user= await collectionController.findAll({where:{userId:userData.userId}})
             if(user.length>0){
                 let totalCollected=0
@@ -544,13 +480,18 @@ const totalcollectionDashboard=async(req, res)=>{
                 cardData.totalCollecteds=totalAmount[0].totalSum
 
                 let rangedCollection=[cardData]
-
+                let collectionUsers= await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                    attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
+                    raw: true // Get raw data instead of Sequelize instances
+                    })
+                const userOnly = collectionUsers.map(item => item.uniqueDate);
 
 
                 if(user.length>0){
-                    let totalCustomer= [await Promise.all (user.map(async userid=>{
-                        let fullName=userid.dataValues.fullName
-                        let userId=userid.dataValues.userId
+                    let totalCustomer= [await Promise.all (userOnly.map(async userid=>{
+                        let user=await userModel.findOne({where:{userId:userid}})
+                        let fullName=user.dataValues.fullName
+                        let userId=userid
                         let customerCount=await collectionController.count(
                             {where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
                             callResponce:{[Op.in]:["payed","paid"]}}})
@@ -606,12 +547,20 @@ const totalcollectionDashboard=async(req, res)=>{
 
             let rangedCollection=[cardData]
 
+            let collectionUsers= await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
+                raw: true // Get raw data instead of Sequelize instances
+                })
+            const userOnly = collectionUsers.map(item => item.uniqueDate);
+
 
 
             if(user.length>0){
-                let totalCustomer= [await Promise.all (user.map(async userid=>{
-                    let fullName=userid.dataValues.fullName
-                    let userId=userid.dataValues.userId
+                let totalCustomer= [await Promise.all (userOnly.map(async userid=>{
+                    let user= await userModel.findOne({where:{userId:userid}})
+                    let fullName=user.dataValues.fullName
+                    // let fullName=userid.dataValues.fullName
+                    let userId=userid
                     let totalAmount=await collectionController.findAll({where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                         attributes: [
                         [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']

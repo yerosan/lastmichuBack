@@ -1,12 +1,6 @@
 const express=require("express")
 const cors=require("cors")
-// const userRoutes=require("./src/route/userRoute")
-// const auth=require("./src/middleware/authorization")
-const predictionRouter=require("./src/route/predictRoute")
-const saccosRoute=require("./src/route/saccosRoute")
-const fuelRoute=require("./src/route/fuelRoute")
-const coopayRoute=require("./src/route/coopayRoute")
-const instituteRoute=require("./src/route/instituteRoute")
+const appUrl=require("./src/config/config")
 const userRoute=require("./src/route/userRoute")
 const collectionRoute=require("./src/route/collectionRoute")
 const roleRoute=require("./src/route/roleRoute")
@@ -16,7 +10,6 @@ app.use(express.json())
 const cdkSequelize= require("./src/db/db")
 
 cdkSequelize.authenticate().then(()=>{
-    console.log("cdk data base is connected successfully")
     cdkSequelize.sync().then(()=>{
         console.log("db is successfully synced")
     })
@@ -25,26 +18,11 @@ cdkSequelize.authenticate().then(()=>{
 })
 
 app.use(cors({
-    origin: "http://localhost:5173", // Replace with your frontend origin
+    origin: `${appUrl}`, // Replace with your frontend origin
     credentials: true // Allow credentials (cookies, authorization headers, etc.)
 })
-// , function(req, res, next) {
-//     res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
-//     res.header(
-//       "Access-Control-Allow-Headers",
-//       "Origin, X-Requested-With, Content-Type, Accept"
-//     );
-//     next();
 
 );
-// app.use(auth)
-
-// app.use("/user",userRoutes)
-app.use("/patient",predictionRouter)
-app.use("/saccos",saccosRoute)
-app.use("/fuel", fuelRoute)
-app.use("/coopayData", coopayRoute)
-app.use("/institute", instituteRoute)
 app.use("/user", userRoute)
 app.use("/collection", collectionRoute)
 app.use("/role", roleRoute)
