@@ -402,11 +402,17 @@ const totalCustomerPerUser=async(req, res)=>{
     const dateRange=req.body
     const userCollectionData=[]
     try{
-        let user= await userModel.findAll()
-        if(user.length>0){
-            let totalCustomer= [await Promise.all (user.map(async userid=>{
-                let userHistory={userName:userid.dataValues.userName, fullName:userid.dataValues.fullName}
-                let userId=userid.dataValues.userId
+        // let user= await userModel.findAll()
+        let collectionUsers= await collectionController.findAll({
+            attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
+            raw: true // Get raw data instead of Sequelize instances
+            })
+        const userOnly = collectionUsers.map(item => item.uniqueDate);
+        if(userOnly.length>0){
+            let totalCustomer= [await Promise.all (userOnly.map(async userid=>{
+                let user= await userModel.findOne({where:{userId:userid}})
+                let userHistory={userName:user.dataValues.userName, fullName:user.dataValues.fullName}
+                let userId=userid
                 let customerCount=await collectionController.count(
                     {where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
                     callResponce:{[Op.in]:["payed","paid"]}}})
@@ -446,8 +452,16 @@ const totalcollectionDashboard=async(req, res)=>{
     const dateRange=req.body
     const collectionData=[]
     const userCollectionData=[]
+    const currentDate=new Date()
+    const currentMonth=currentDate.getMonth()+1
+    const currentYear=currentDate.getFullYear()
+    const currentDay=currentDate.getDate()
+    const month = `0${currentMonth}`.slice(-2);
+    const day = `0${currentDay}`.slice(-2);
+    const today=`${currentYear}-${month}-${day}`;
     try{
         if (! dateRange.startDate){
+            // let lastDateData=await collectionController.findAll({order:[["date", "DESC"]]})
             await collectionController.sync()
             await userModel.sync()
              let collectionStart= await collectionController.findOne({order:[["Date","ASC"]]})
@@ -480,6 +494,79 @@ const totalcollectionDashboard=async(req, res)=>{
                 cardData.totalCollecteds=totalAmount[0].totalSum
 
                 let rangedCollection=[cardData]
+                
+                let collectionDate= await collectionController.findAll({
+                    attributes: [[sequelize.fn('DISTINCT', sequelize.col('date')), "uniqueDate"]],
+                    raw: true // Get raw data instead of Sequelize instances
+                    })
+                const valuesOnly = collectionDate.map(item => item.uniqueDate);
+                const sortedValues = valuesOnly.sort((a, b) => new Date(b)-new Date(a));
+
+
+                if(sortedValues.length>0){
+                    if(today==sortedValues[0]){
+                        previousDate=sortedValues[1]
+                        let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:'paid'}})
+                        cardData.previousAccount=previousAccount
+                        if(previousDate){
+                            let yesterdayColletion= await collectionController.findAll({where:{date:previousDate},
+                                attributes: [
+                                    [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                                ],
+                                raw:true
+                                })
+                            if(yesterdayColletion[0].totalSum){
+                                cardData.previousColletion=yesterdayColletion[0].totalSum
+    
+                            }else{
+                                cardData.previousColletion=0
+    
+                            }
+                        }
+                        else{
+                            cardData.previousColletion=0
+
+                        }
+    
+                    }else{
+                        previousDate=sortedValues[0]
+                        let yesterdayColletion= await collectionController.findAll({where:{date:previousDate},
+                            attributes: [
+                                [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                            ],
+                            raw:true
+                            })
+                        let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:"paid"}})
+                        cardData.previousAccount=previousAccount
+                        if(yesterdayColletion[0].totalSum){
+                            cardData.previousColletion=yesterdayColletion[0].totalSum
+                        }else{
+                            cardData.previousColletion=0
+                            
+                        }
+                    }
+               }else{
+                    cardData.previousColletion=0
+                    cardData.previousAccount=0
+               }
+
+               let liveCollection=await collectionController.findAll({where:{date:today},
+                attributes: [
+                    [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                ],
+                raw:true
+                })
+                let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:today, callResponce:"paid"}})
+                cardData.liveAccount=liveAccount
+                if(liveCollection[0].totalSum){
+                cardData.liveCollection=liveCollection[0].totalSum
+                }else{
+                    cardData.liveCollection=0
+                }
+
+
+
+
                 let collectionUsers= await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                     attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
                     raw: true // Get raw data instead of Sequelize instances
@@ -523,6 +610,7 @@ const totalcollectionDashboard=async(req, res)=>{
             let cardData={}
             let userHistory={}
             let user= await userModel.findAll()
+            let lastDateData=await collectionController.findAll({order:[["date", "DESC"]]})
             let allCustomer=await collectionController.count({"DISTINCT":"customerPhone", where:{callResponce:{[Op.in]:["paid","payed"]},date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
             let uniqueDay=await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
             let totalAmount=await collectionController.findAll({ where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
@@ -546,6 +634,81 @@ const totalcollectionDashboard=async(req, res)=>{
             cardData.totalCollecteds=totalAmount[0].totalSum
 
             let rangedCollection=[cardData]
+
+
+
+            let collectionDate= await collectionController.findAll({
+                attributes: [[sequelize.fn('DISTINCT', sequelize.col('date')), "uniqueDate"]],
+                raw: true // Get raw data instead of Sequelize instances
+                })
+            const valuesOnly = collectionDate.map(item => item.uniqueDate);
+            const sortedValues = valuesOnly.sort((a, b) => new Date(b)-new Date(a));
+
+
+            if(sortedValues.length>0){
+                if(today==sortedValues[0]){
+                    previousDate=sortedValues[1]
+                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:'paid'}})
+                    cardData.previousAccount=previousAccount
+                    if(previousDate){
+                        let yesterdayColletion= await collectionController.findAll({where:{date:previousDate},
+                            attributes: [
+                                [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                            ],
+                            raw:true
+                            })
+                        if(yesterdayColletion[0].totalSum){
+                            cardData.previousColletion=yesterdayColletion[0].totalSum
+
+                        }else{
+                            cardData.previousColletion=0
+
+                        }
+                    }
+                    else{
+                        cardData.previousColletion=0
+
+                    }
+
+                }else{
+                    previousDate=sortedValues[0]
+                    let yesterdayColletion= await collectionController.findAll({where:{date:previousDate},
+                        attributes: [
+                            [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+                        ],
+                        raw:true
+                        })
+                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:"paid"}})
+                    cardData.previousAccount=previousAccount
+                    if(yesterdayColletion[0].totalSum){
+                        cardData.previousColletion=yesterdayColletion[0].totalSum
+                    }else{
+                        cardData.previousColletion=0
+                        
+                    }
+                }
+           }else{
+                cardData.previousColletion=0
+                cardData.previousAccount=0
+           }
+
+           let liveCollection=await collectionController.findAll({where:{date:today},
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
+            ],
+            raw:true
+            })
+            let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:today, callResponce:"paid"}})
+            cardData.liveAccount=liveAccount
+            if(liveCollection[0].totalSum){
+            cardData.liveCollection=liveCollection[0].totalSum
+            }else{
+                cardData.liveCollection=0
+            }
+
+
+
+
 
             let collectionUsers= await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                 attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
@@ -573,8 +736,9 @@ const totalcollectionDashboard=async(req, res)=>{
                     }else{
                         userHistory[fullName]=0
                     }
-                    userCollectionData.push(userHistory)
+                    
                 }))]
+                userCollectionData.push(userHistory)
                 collectionData.push(rangedCollection)
                 collectionData.push(userCollectionData)
                 res.status(200).json({message:"succeed", data:collectionData})
