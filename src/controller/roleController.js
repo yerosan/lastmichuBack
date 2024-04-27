@@ -5,9 +5,6 @@ const userModel=require("../models/userModel")
 const addRole=async(req,res)=>{
     const roleData=req.body
 
-    // if(roleData.admin || roleData.collectionAdmin || roleData.operationalAdmin || roleData.salesAdim
-    //    || roleData.operationalUser || roleData.salesUser || roleData.collectionUser){
-
         if(roleData.userName){
            try{
             roleModel.sync()
@@ -39,9 +36,6 @@ const updateRole=async(req, res)=>{
     const updateData=req.body
     try{
         if(updateData.userId){
-                // roleModel.sync()
-                // let user=await userModel.findOne({where:{userName:updateData.userName}})
-            // console.log("this is userID", user)
             let roleUpdate= await roleModel.update(updateData,{where:{userId:updateData.userId}})
             console.log("this is userRole", roleUpdate)
             if(roleUpdate){

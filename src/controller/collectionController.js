@@ -290,7 +290,6 @@ const totalCollectedPeruser=async(req,res)=>{
         const userStatus={}
         if(userData){
             await collectionController.sync()
-            // await performanceModel.sync()
             const user= await collectionController.findAll({where:{userId:userData.userId}})
             if(user.length>0){
                 let totalCollected=0
@@ -402,7 +401,6 @@ const totalCustomerPerUser=async(req, res)=>{
     const dateRange=req.body
     const userCollectionData=[]
     try{
-        // let user= await userModel.findAll()
         let collectionUsers= await collectionController.findAll({
             attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
             raw: true // Get raw data instead of Sequelize instances
@@ -461,13 +459,11 @@ const totalcollectionDashboard=async(req, res)=>{
     const today=`${currentYear}-${month}-${day}`;
     try{
         if (! dateRange.startDate){
-            // let lastDateData=await collectionController.findAll({order:[["date", "DESC"]]})
             await collectionController.sync()
             await userModel.sync()
              let collectionStart= await collectionController.findOne({order:[["Date","ASC"]]})
              if (collectionStart){
                 dateRange.startDate=collectionStart.dataValues.date
-
                 let cardData={}
                 let userHistory={}
                 let user= await userModel.findAll()
@@ -501,8 +497,6 @@ const totalcollectionDashboard=async(req, res)=>{
                     })
                 const valuesOnly = collectionDate.map(item => item.uniqueDate);
                 const sortedValues = valuesOnly.sort((a, b) => new Date(b)-new Date(a));
-
-
                 if(sortedValues.length>0){
                     if(today==sortedValues[0]){
                         previousDate=sortedValues[1]
@@ -722,7 +716,6 @@ const totalcollectionDashboard=async(req, res)=>{
                 let totalCustomer= [await Promise.all (userOnly.map(async userid=>{
                     let user= await userModel.findOne({where:{userId:userid}})
                     let fullName=user.dataValues.fullName
-                    // let fullName=userid.dataValues.fullName
                     let userId=userid
                     let totalAmount=await collectionController.findAll({where:{userId:userId, date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                         attributes: [
@@ -754,9 +747,10 @@ const totalcollectionDashboard=async(req, res)=>{
 }
 
 
-const allCollection= async(req, res)=>{
+const userCollection= async(req, res)=>{
+    const dateRange=req.body
     try{
-        const allCollection =await collectionController.findAll()
+        const allCollection =await collectionController.findAll({where:{date:dateRange.date, userId:dateRange.userId}})
         if(allCollection.length>0){
             await Promise.all(allCollection.map(async collectionData=>{
                let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
@@ -774,4 +768,70 @@ const allCollection= async(req, res)=>{
      res.status(500).json({message:"An internal error"})
     }
 }
-module.exports={addColletionData,allCollection, totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser, collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange}
+
+const allCollection= async(req, res)=>{
+    const dateRange=req.body
+    try{
+        const allCollection =await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+        if(allCollection.length>0){
+            await Promise.all(allCollection.map(async collectionData=>{
+               let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
+               if(user){
+                collectionData.dataValues.userName=user.dataValues.userName
+                collectionData.dataValues.fullName=user.dataValues.fullName
+               }
+            }))
+          res.status(200).json({message:"succeed", data:allCollection})
+        }else{
+            res.status(200).json({message:"Data doesn't exist"})
+        }
+    }catch(error){
+     console.log("The error", error)
+     res.status(500).json({message:"An internal error"})
+    }
+}
+
+const collectionUpdate=async(req, res)=>{
+    const updatingData=req.body
+    if(updatingData.collectionId && updatingData.userId){
+    try{
+        let preivData= await collectionController.findOne({where:{collectionId:updatingData.collectionId, userId: updatingData.userId}})
+        if(preivData){
+            let updating= await collectionController.update(updatingData,{where:{collectionId:updatingData.collectionId, userId: updatingData.userId}})
+            if(updating){
+               res.status(200).json({message:"succeed", data:updating})
+            }else{
+              res.status(200).json({message:"Unable to upate data"})
+            }
+        }else{
+            res.status(200).json({message:"Vailed data is not found"})
+        }
+    }catch(error){
+        console.log("An internal error", error)
+        res.status(200).json({message:"An internal error"})
+    }
+}else{
+    res.status(200).json({message:"Missed required data"})
+}
+
+}
+
+const deleteCollectionData= async(req, res)=>{
+    const userData=req.body
+    if(!userData.userId || !userData.collectionId){
+        res.status(200).json({message:"Missed required data"})
+    }else{
+        try{
+            let dataDeleting= await collectionController.destroy({where:{userId:userData.userId, collectionId:userData.collectionId}})
+            if (dataDeleting){
+                res.status(200).json({message:"succeed", data:dataDeleting})
+            }else{
+                res.status(200).json({message:"Unable to delete data"})
+            }
+        }catch(error){
+            console.log("The error", error)
+            res.status(500).json({message:"An internal error"})
+        }
+    }
+}
+module.exports={addColletionData,allCollection,userCollection,collectionUpdate,deleteCollectionData,totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser, collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange}
