@@ -4,6 +4,7 @@ const appUrl=require("./src/config/config")
 const userRoute=require("./src/route/userRoute")
 const collectionRoute=require("./src/route/collectionRoute")
 const roleRoute=require("./src/route/roleRoute")
+const salseRouter=require("./src/route/salseRouter")
 app=express()
 
 app.use(express.json())
@@ -26,6 +27,7 @@ app.use(cors({
 app.use("/user", userRoute)
 app.use("/collection", collectionRoute)
 app.use("/role", roleRoute)
+app.use("/salse", salseRouter)
 
 app.listen(3000, ()=>{
     console.log("app is listening in port 3000")

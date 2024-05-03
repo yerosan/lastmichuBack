@@ -31,11 +31,6 @@ const CollectionModel=sequelize.define("Collection_data",{
         allowNull:false,
         defaultValue:0
     },
-    // totalPayed:{
-    //     type:Sequelize.FLOAT,
-    //     allowNull:false,
-    //     defaultValue:0
-    // },
     date:{
         type:Sequelize.DATEONLY,
         allowNull:false,

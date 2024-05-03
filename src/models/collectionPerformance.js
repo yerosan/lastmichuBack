@@ -12,10 +12,6 @@ const performanceTable=sequelize.define("collceton_performance", {
         type:Sequelize.UUID,
         allowNull:false,
     },
-    // totalContacted:{
-    //     type:Sequelize.INTEGER,
-    //     allowNull:false
-    // },
     collectedAmount:{
         type:Sequelize.FLOAT,
         allowNull:false,
