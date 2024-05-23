@@ -1,0 +1,101 @@
+const sequelize=require("../db/db")
+const Sequelize=require("sequelize")
+
+const userDistrictModel= sequelize.define("District", {
+    userId:{
+       type:Sequelize.UUID,
+       allowNull:false, 
+       primaryKey:true,
+    },
+    centeralFinfine:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    northFinfine:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    eastFinfine:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    southFinfine:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    westFinfine:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    adama:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    asalla:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    chiro:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    bale:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+
+    dirreDawa:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    jimma:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+   naqamte:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+   shashamanne:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    hawasa:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    hosana:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    bahirdar:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    },
+    mekelle:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    }
+
+
+
+})
+
+module.exports=userDistrictModel

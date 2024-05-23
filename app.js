@@ -5,6 +5,7 @@ const userRoute=require("./src/route/userRoute")
 const collectionRoute=require("./src/route/collectionRoute")
 const roleRoute=require("./src/route/roleRoute")
 const salseRouter=require("./src/route/salseRouter")
+const operationalRouter=require("./src/route/operationalRoute")
 app=express()
 
 app.use(express.json())
@@ -19,8 +20,8 @@ cdkSequelize.authenticate().then(()=>{
 })
 
 app.use(cors({
-    origin: `${appUrl}`, // Replace with your frontend origin
-    credentials: true // Allow credentials (cookies, authorization headers, etc.)
+    origin: `${appUrl}`, 
+    credentials: true 
 })
 
 );
@@ -28,6 +29,7 @@ app.use("/user", userRoute)
 app.use("/collection", collectionRoute)
 app.use("/role", roleRoute)
 app.use("/salse", salseRouter)
+app.use("/operational", operationalRouter)
 
 app.listen(3000, ()=>{
     console.log("app is listening in port 3000")

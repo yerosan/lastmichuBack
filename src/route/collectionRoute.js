@@ -14,5 +14,6 @@ router.post("/dashboard",collectionController.totalcollectionDashboard )
 router.patch("/update", collectionController.collectionUpdate)
 router.post("/userCollection", collectionController.userCollection)
 router.delete("/delete", collectionController.deleteCollectionData)
+router.post("/userDetail", collectionController.userCollectionDetail)
 
 module.exports = router;

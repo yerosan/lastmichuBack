@@ -769,6 +769,30 @@ const userCollection= async(req, res)=>{
     }
 }
 
+
+const userCollectionDetail= async(req, res)=>{
+    const dateRange=req.body
+    try{
+        const allCollection =await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}, userId:dateRange.userId}})
+        if(allCollection.length>0){
+            await Promise.all(allCollection.map(async collectionData=>{
+               let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
+               if(user){
+                collectionData.dataValues.userName=user.dataValues.userName
+                collectionData.dataValues.officerName=user.dataValues.fullName
+               }
+            }))
+          res.status(200).json({message:"succeed", data:allCollection})
+        }else{
+            res.status(200).json({message:"Data doesn't exist"})
+        }
+    }catch(error){
+     console.log("The error", error)
+     res.status(500).json({message:"An internal error"})
+    }
+}
+
+
 const allCollection= async(req, res)=>{
     const dateRange=req.body
     try{
@@ -834,4 +858,6 @@ const deleteCollectionData= async(req, res)=>{
         }
     }
 }
-module.exports={addColletionData,allCollection,userCollection,collectionUpdate,deleteCollectionData,totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser, collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange}
+module.exports={addColletionData,allCollection,userCollection,collectionUpdate,
+    deleteCollectionData,totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser,
+     collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange, userCollectionDetail}

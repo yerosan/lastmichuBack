@@ -12,24 +12,34 @@ const OperationModel=sequelize.define("Operational_data",{
         type:Sequelize.UUID,
         allowNull:false
     },
-    totalApproved:{
+    officerName:{
+        type:Sequelize. STRING,
+        allowNull:false
+    },
+    customerName:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
+    customerPhone:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
+    applicationStatus:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
+    approvedAmount:{
        type:Sequelize.INTEGER,
-       allowNull:false
+       allowNull:false,
+       defaultValue:0
     },
-    totalRejected:{
-        type:Sequelize.INTEGER,
-        allowNull:false
-    },
-    totalApplicant:{
-        type:Sequelize.INTEGER,
-        allowNull:false
-    },
-    totalAmount:{
-        type:Sequelize.FLOAT,
-        allowNull:false
+    RejectionReason:{
+        type:Sequelize.TEXT,
+        allowNull:false,
+        defaultValue:"Verified"
     },
     approvalDate:{
-        type:Sequelize.DATE,
+        type:Sequelize.DATEONLY,
         allowNull:false
     }
 

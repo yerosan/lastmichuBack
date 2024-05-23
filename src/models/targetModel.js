@@ -1,21 +1,16 @@
 const sequelize=require("../db/db")
 const Sequelize=require("sequelize")
 
-
-const SalseModel= sequelize.define("Salse_data", {
-    salseId:{
+const targetModel=sequelize.define( "Sales_target",{
+    targetId:{
         type:Sequelize.UUID,
         allowNull:false,
         primaryKey:true,
         defaultValue:Sequelize.UUIDV4
     },
-    userId:{
-        type:Sequelize.UUID,
+    districtName:{
+        type:Sequelize.STRING,
         allowNull:false
-    },
-    district:{
-       type:Sequelize.TEXT,
-       allowNull:false
     },
     uniqueCustomer:{
         type:Sequelize.INTEGER,
@@ -40,4 +35,4 @@ const SalseModel= sequelize.define("Salse_data", {
     }
 })
 
-module.exports=SalseModel
+module.exports= targetModel
