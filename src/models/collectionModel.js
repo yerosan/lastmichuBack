@@ -13,8 +13,16 @@ const CollectionModel=sequelize.define("Collection_data",{
         type:Sequelize.UUID,
         allowNull:false
     },
+    customerName:{
+        type:Sequelize.TEXT,
+        allowNull:false,
+    },
     customerPhone:{
-        type:Sequelize.STRING,
+        type:Sequelize.TEXT,
+        allowNull:false,
+    },
+    customerAccount:{
+        type:Sequelize.TEXT,
         allowNull:false,
     },
     callResponce:{

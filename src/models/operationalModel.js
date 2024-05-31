@@ -16,11 +16,21 @@ const OperationModel=sequelize.define("Operational_data",{
         type:Sequelize. STRING,
         allowNull:false
     },
+
+    customerId:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
+
     customerName:{
         type:Sequelize.STRING,
         allowNull:false
     },
     customerPhone:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
+    callStatus:{
         type:Sequelize.STRING,
         allowNull:false
     },

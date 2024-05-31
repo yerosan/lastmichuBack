@@ -6,7 +6,7 @@ const userModel=require("../models/userModel")
 
 const addOperationalData= async(req, res)=>{
     const datas=req.body
-    if(! datas.customerName || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
+    if(! datas.customerName || !datas.customerId || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
        ! datas.userId || !datas.officerName
     ){
         res.status(200).json({message:"All field is required"})
@@ -44,6 +44,7 @@ const getOperationalData= async(req, res)=>{
         }
     }catch(error){
         res.status(500).json({message:"An internal error"})
+        console.log("The error", error)
     }
 
 }

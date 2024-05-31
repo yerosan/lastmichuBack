@@ -10,6 +10,8 @@ const addColletionData=async(req, res)=>{
     const dataSet=req.body
     if(!dataSet.userName || 
         !dataSet.customerPhone||
+        !dataSet.customerName||
+        !dataSet.customerAccount||
         !dataSet.callResponce ||
         !dataSet.date
         ){ 
