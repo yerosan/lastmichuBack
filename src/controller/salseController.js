@@ -10,7 +10,7 @@ const districtModel=require("../models/districtPerUser")
 const addSalseData= async(req, res)=>{
    const salseData=req.body
    if (!salseData.userName || !salseData.uniqueCustomer || !salseData.numberOfAccount ||
-       !salseData.disbursedAmount || !salseData.income || !salseData.district){
+       !salseData.disbursedAmount || !salseData.income || !salseData.district || !salseData.branchName){
         res.status(200).json({message:"All field is requried"})
        }else{
     try{
@@ -266,23 +266,19 @@ const incomePeruser=async(req, res)=>{
 const addTarget=async(req, res)=>{
     const targetData=req.body
     if(! targetData.date || !targetData.income || !targetData.numberOfAccount || ! targetData.disbursedAmount 
-    || ! targetData.uniqueCustomer || ! targetData.districtName){
+    || ! targetData.uniqueCustomer || ! targetData.districtName || !targetData.branchName){
         res.status(200).json({message:"All field is required"})
     }else{
         try{
             await targetModel.sync()
             const date= new Date(targetData.date)
-            let month =date.getMonth()
-            let year= date.getFullYear()
-            const startDates = moment(`${year}-${month+1}-01`).startOf('month').toDate();
-            const endDates = moment(startDates).endOf('month').toDate();
-            const startMonth=`0${startDates.getMonth()+1}`.slice(-2)
-            const endMonth=`0${endDates.getMonth()+1}`.slice(-2)
-            const stDate=`0${startDates.getDate()}`.slice(-2)
-            const edDate=`0${endDates.getDate()}`.slice(-2)
-            const startDate=`${startDates.getFullYear()}-${startMonth}-${stDate}`
-            const endDate=`${endDates.getFullYear()}-${endMonth}-${edDate}`
-            const checkTarget= await targetModel.findOne({where:{districtName:targetData.districtName, date:{[Op.between]:[startDate, endDate]}}})
+            const startyears = new Date(date).getFullYear();
+            const startmonth = new Date(date).getMonth();
+
+            const startDates = moment(`${startyears}-${String(startmonth + 1).padStart(2, '0')}-01`, 'YYYY-MM-DD').startOf('month').format('YYYY-MM-DD');
+            const endDatess = moment(`${startyears}-${String(startmonth + 1).padStart(2, '0')}-01`, 'YYYY-MM-DD').endOf('month').format('YYYY-MM-DD');
+            const endDates = moment(endDatess).endOf('month').format('YYYY-MM-DD');
+            const checkTarget= await targetModel.findOne({where:{districtName:targetData.districtName,branchName:targetData.branchName, date:{[Op.between]:[startDates, endDates]}}})
             if(checkTarget){
                 res.status(200).json({message:"Data already exist"})
             }else{
@@ -302,8 +298,9 @@ const addTarget=async(req, res)=>{
 }
 
 const getTarget = async (req, res)=>{
+    const dateVariation= req.body
     try{
-        const targets= await targetModel.findAll()
+        const targets= await targetModel.findAll({where:{date:{[Op.between]:[dateVariation.startDate, dateVariation.endDate]}}})
         if(targets.length>0){
           res.status(200).json({message:"succeed", data:targets})
         }else{
@@ -317,14 +314,15 @@ const getTarget = async (req, res)=>{
 
 const getTargetPerDate= async(req, res)=>{
     const dateVariation= req.body
-    const dats="2024-05-16"
-    const startyears = new Date(dats).getFullYear()
-    const startmonth = new Date(dateVariation.startDate).getMonth()
-    const endyears = new Date(dateVariation.endDate).getFullYear()
-    const endmonth = new Date(dateVariation.endDate).getMonth()
-    const startDates = moment(`${startyears}-${startmonth+1}-01`).startOf('month').toDate();
-    const endDatess = moment(`${endyears}-${endmonth+1}-01`).startOf('month').toDate();
-    const endDates = moment(endDatess).endOf('month').toDate();
+    // const startDates = moment(`${startyears}-${String(startmonth + 1).padStart(2, '0')}-01`, 'YYYY-MM-DD').startOf('month').toDate();
+    const startyears = new Date(dateVariation.startDate).getFullYear();
+    const startmonth = new Date(dateVariation.startDate).getMonth();
+    const endyears = new Date(dateVariation.endDate).getFullYear();
+    const endmonth = new Date(dateVariation.endDate).getMonth();
+
+    const startDates = moment(`${startyears}-${String(startmonth + 1).padStart(2, '0')}-01`, 'YYYY-MM-DD').startOf('month').format('YYYY-MM-DD');
+    const endDatess = moment(`${endyears}-${String(endmonth + 1).padStart(2, '0')}-01`, 'YYYY-MM-DD').startOf('month').format('YYYY-MM-DD');
+    const endDates = moment(endDatess).endOf('month').format('YYYY-MM-DD');
     try{
         await districtLists.sync()
         const listss= await districtLists.findAll()

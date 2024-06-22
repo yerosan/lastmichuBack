@@ -17,6 +17,10 @@ const SalseModel= sequelize.define("Salse_data", {
        type:Sequelize.TEXT,
        allowNull:false
     },
+    branchName:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
     uniqueCustomer:{
         type:Sequelize.INTEGER,
         allowNull:false

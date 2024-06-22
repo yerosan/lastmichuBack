@@ -12,6 +12,10 @@ const targetModel=sequelize.define( "Sales_target",{
         type:Sequelize.STRING,
         allowNull:false
     },
+    branchName:{
+        type:Sequelize.STRING,
+        allowNull:false
+    },
     uniqueCustomer:{
         type:Sequelize.INTEGER,
         allowNull:false
