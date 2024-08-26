@@ -1,5 +1,5 @@
-const CollectionModel = require("../models/CollectionModel")
-const collectionController=require("../models/CollectionModel")
+const CollectionModel = require("../models/collectionModel")
+const collectionController=require("../models/collectionModel")
 const userModel=require("../models/userModel")
 const performanceModel=require("../models/collectionPerformance")
 const sequelize=require("sequelize")
@@ -8,6 +8,8 @@ const { raw } = require("body-parser")
 const moment = require('moment'); // For date manipulation
 const addColletionData=async(req, res)=>{
     const dataSet=req.body
+
+    
     if(!dataSet.userName || 
         !dataSet.customerPhone||
         !dataSet.customerName||

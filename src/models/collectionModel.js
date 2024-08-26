@@ -2,7 +2,7 @@ const sequelize=require("../db/db")
 const Sequelize=require("sequelize")
 
 
-const CollectionModel=sequelize.define("Collection_data",{
+const CollectionModel=sequelize.define("collectionDataset",{
     collectionId:{
         type:Sequelize.UUID,
         defaultValue:Sequelize.UUIDV4,
@@ -32,12 +32,16 @@ const CollectionModel=sequelize.define("Collection_data",{
     paymentStatus:{
         type:Sequelize.STRING,
         allowNull:false,
-        defaultValue:'notPaid'
+        defaultValue:'Not paid'
     },
     payedAmount:{
         type:Sequelize.FLOAT,
         allowNull:false,
         defaultValue:0
+    },
+    productType:{
+        type:Sequelize.STRING,
+        allowNull:true,
     },
     date:{
         type:Sequelize.DATEONLY,
