@@ -2,7 +2,7 @@ const sequelize=require("../db/db")
 const Sequelize=require("sequelize")
 
 
-const CollectionModel=sequelize.define("collectionDataset",{
+const CollectionModel=sequelize.define("Collection_data",{
     collectionId:{
         type:Sequelize.UUID,
         defaultValue:Sequelize.UUIDV4,
