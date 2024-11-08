@@ -2,14 +2,15 @@ const CollectionModel = require("../models/collectionModel")
 const collectionController=require("../models/collectionModel")
 const userModel=require("../models/userModel")
 const performanceModel=require("../models/collectionPerformance")
+const assignedCustomerModel=require("../models/customerAssinged")
 const sequelize=require("sequelize")
+const querys=require("../query/collectionQuerys")
+const sequeledb=require("../db/db")
 const { where,Op } = require("sequelize")
 const { raw } = require("body-parser")
 const moment = require('moment'); // For date manipulation
 const addColletionData=async(req, res)=>{
     const dataSet=req.body
-
-    
     if(!dataSet.userName || 
         !dataSet.customerPhone||
         !dataSet.customerName||
@@ -381,6 +382,43 @@ const collectedAmount=async(req,res)=>{
 }
 
 
+const champions = async (req, res) => {
+    const dateRanges= req.body;
+    const months=dateRanges.dateRange
+    const weeks=dateRanges.weekRange
+   
+    // Validate input for required fields
+    if (!months || !months.startDate || !months.endDate || !weeks || !weeks.startDate || !weeks.endDate) {
+        return res.status(200).json({
+            message: "Date range should be defined"
+        });
+    }
+
+    try {
+        const championQuery = querys.championQuery;
+        const championsOfMonth = await sequeledb.query(championQuery, {
+            replacements: { startDate: months.startDate, endDate: months.endDate },
+            raw: true
+        });
+        
+        const championsOfWeek = await sequeledb.query(championQuery, {
+            replacements: { startDate: weeks.startDate, endDate: weeks.endDate },
+            raw: true
+        });
+        res.status(200).json({
+            message: "succeed",
+            data: {
+                ChampionOfMonths: championsOfMonth.length ? championsOfMonth[0] : null,
+                ChampionsOfWeeks: championsOfWeek.length ? championsOfWeek[0] : null
+            }
+        });
+
+    } catch (error) {
+        console.error("An error:", error);
+        res.status(500).json({ message: "An internal error occurred" });
+    }
+};
+
 
 const deleteUser=async(req, res)=>{
     try{
@@ -405,7 +443,7 @@ const totalCustomerPerUser=async(req, res)=>{
     const dateRange=req.body
     const userCollectionData=[]
     try{
-        let collectionUsers= await collectionController.findAll({
+        let collectionUsers= await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
             attributes: [[sequelize.fn('DISTINCT', sequelize.col('userId')), "uniqueDate"]],
             raw: true // Get raw data instead of Sequelize instances
             })
@@ -425,12 +463,20 @@ const totalCustomerPerUser=async(req, res)=>{
                     raw:true
                   })
                 let customertotal=await collectionController.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+                let totalAssignedCustomer=await assignedCustomerModel.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                    attributes:[
+                        [sequelize.fn("SUM",sequelize.col("totalAssignedCustomer")),"totalAssigned"]
+                    ],
+                    raw:true
+                })
                 if(customertotal.length>0){
+                    userHistory.totalAssigned = Number(totalAssignedCustomer[0].totalAssigned) ? Number(totalAssignedCustomer[0].totalAssigned) : 0;
                     userHistory.totalPaid=customerCount
                     userHistory.totalCustomer=customertotal.length
                     userHistory.totalUnpaid=customertotal.length-customerCount
                     userHistory.totalCollectedAmount=totalAmount[0].totalSum
                 }else{
+                    userHistory.totalAssigned = Number(totalAssignedCustomer[0].totalAssigned) ? Number(totalAssignedCustomer[0].totalAssigned) : 0;
                     userHistory.totalPaid=0
                     userHistory.totalCustomer=0
                     userHistory.totalUnpaid=0
@@ -864,4 +910,6 @@ const deleteCollectionData= async(req, res)=>{
 }
 module.exports={addColletionData,allCollection,userCollection,collectionUpdate,
     deleteCollectionData,totalcollectionDashboard, totalCustomerPerUser,totalCollectedPeruser,
-     collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange, userCollectionDetail}
+     collectedAmount,CollectetionPerUser,deleteUser, totalCollectedPerDateRange,
+      userCollectionDetail,champions
+    }

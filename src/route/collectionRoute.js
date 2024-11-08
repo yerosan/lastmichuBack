@@ -2,6 +2,7 @@ const express=require("express")
 const router=express.Router()
 const collectionController=require("../controller/collectionController")
 const { col } = require("sequelize")
+const assignController=require("../controller/assignedCustomer")
 
 router.post("/add", collectionController.addColletionData)
 router.get("/users/:userName", collectionController.CollectetionPerUser)
@@ -15,5 +16,11 @@ router.patch("/update", collectionController.collectionUpdate)
 router.post("/userCollection", collectionController.userCollection)
 router.delete("/delete", collectionController.deleteCollectionData)
 router.post("/userDetail", collectionController.userCollectionDetail)
+
+router.post("/assignedCustomer", assignController.addAssingedCustomer)
+router.patch("/editAssignedCustomer", assignController.editAssignedCustomer)
+router.get("/getCollectionuser", assignController.getAllCollectionUser)
+router.post("/getAssignedCustomer", assignController.getAssignedData)
+router.post("/champions", collectionController.champions)
 
 module.exports = router;
