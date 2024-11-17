@@ -6,7 +6,8 @@ const userModel=require("../models/userModel")
 
 const addOperationalData= async(req, res)=>{
     const datas=req.body
-    if(! datas.customerName || !datas.customerId || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
+    console.log("The Data_---------", datas)
+    if(! datas.customerName || !datas.savingAccount || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
        ! datas.userId || !datas.officerName
     ){
         res.status(200).json({message:"All field is required"})

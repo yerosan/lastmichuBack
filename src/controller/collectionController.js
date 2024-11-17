@@ -186,7 +186,6 @@ const totalCollectedPerDateRange=async(req, res)=>{
     if(!dateRange.startDate|| !dateRange.endDate){
         res.status(200).json({message:"Date range is required"})
     }
-
     try{
         // await performanceModel.sync()
         await collectionController.sync()

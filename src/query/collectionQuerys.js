@@ -19,17 +19,17 @@ const assignedCustomer = require("../models/customerAssinged")
 // `
 championQuery=`
 SELECT 
-    collection_data.userId,
-    SUM(collection_data.payedAmount) AS totalCollectedAmount,
+    Collection_data.userId,
+    SUM(Collection_data.payedAmount) AS totalCollectedAmount,
     user_informations.fullName
 FROM 
-    collection_data
+    Collection_data
 LEFT JOIN 
-    user_informations ON user_informations.userId = collection_data.userId
+    user_informations ON user_informations.userId = Collection_data.userId
 WHERE 
     date >= :startDate AND date <= :endDate
 GROUP BY 
-    collection_data.userId, user_informations.fullName
+    Collection_data.userId, user_informations.fullName
 ORDER BY 
     totalCollectedAmount DESC
 LIMIT 1;
@@ -37,14 +37,14 @@ LIMIT 1;
 
 assignedQuery=`
 SELECT 
-assigned_customers.assignedId,
-assigned_customers.registererId,
-assigned_customers.userId,
+Assigned_customers.assignedId,
+Assigned_customers.registererId,
+Assigned_customers.userId,
 user_informations.fullName,
-assigned_customers.totalAssignedCustomer,
-assigned_customers.date
-FROM assigned_customers
-left join user_informations on user_informations.userId=assigned_customers.userId
+Assigned_customers.totalAssignedCustomer,
+Assigned_customers.date
+FROM Assigned_customers
+left join user_informations on user_informations.userId=Assigned_customers.userId
  WHERE date BETWEEN :startDate AND :endDate;
 `
 

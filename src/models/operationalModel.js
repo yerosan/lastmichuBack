@@ -17,7 +17,7 @@ const OperationModel=sequelize.define("Operational_data",{
         allowNull:false
     },
 
-    customerId:{
+    savingAccount:{
         type:Sequelize.STRING,
         allowNull:false
     },
