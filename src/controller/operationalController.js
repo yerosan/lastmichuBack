@@ -6,7 +6,6 @@ const userModel=require("../models/userModel")
 
 const addOperationalData= async(req, res)=>{
     const datas=req.body
-    console.log("The Data_---------", datas)
     if(! datas.customerName || !datas.savingAccount || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
        ! datas.userId || !datas.officerName
     ){
@@ -14,7 +13,7 @@ const addOperationalData= async(req, res)=>{
     }else{
         try{
             await operationalModel.sync()
-            const checkData= await operationalModel.findOne({where:{customerPhone:datas.customerPhone, userId:datas.userId, approvaldate:datas.approvalDate }})
+            const checkData= await operationalModel.findOne({where:{customerPhone:datas.customerPhone,applicationStatus:"approved", userId:datas.userId, approvaldate:datas.approvalDate }})
             if(checkData){
                 res.status(200).json({message:'Customer data already exist'})
             }else{
@@ -83,7 +82,7 @@ const getOperationalDataPerUserTotal=async(req, res)=>{
                 await Promise.all(
                 allUser.map( async userData=>{
                     let userId=userData.user
-                    const getUserData= await operationalModel.findAll ({where:{userId:userId, approvalDate:{[Op.between]:[data.startDate, data.endDate]}},
+                    const getUserData= await operationalModel.findAll ({where:{userId:userId,applicationStatus:"approved", approvalDate:{[Op.between]:[data.startDate, data.endDate]}},
                         attributes: [
                             [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
                             ],
@@ -242,7 +241,7 @@ const totalApprovalDashboard= async (req,res)=>{
         let totalUniqueDay=  await operationalModel.findAll()
         
         if(dateRange.startDate){
-            let totalAmount=await operationalModel.findAll({ where:{approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+            let totalAmount=await operationalModel.findAll({ where:{applicationStatus:"approved",approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
                 attributes: [
                 [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
                 ],
@@ -254,7 +253,7 @@ const totalApprovalDashboard= async (req,res)=>{
                 cardData.totalApprovedAmount=0
             }
         }else{
-        let totalAmount=await operationalModel.findAll({
+        let totalAmount=await operationalModel.findAll({ where:{applicationStatus:"approved"},
             attributes: [
             [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
             ],
@@ -266,7 +265,7 @@ const totalApprovalDashboard= async (req,res)=>{
             cardData.totalApprovedAmount=0
         }
     }
-        let weeklytotalAmount=await operationalModel.findAll({ where:{approvalDate:{[Op.between]:[dateRange.weekStart, dateRange.weekEnd]}},
+        let weeklytotalAmount=await operationalModel.findAll({ where:{applicationStatus:"approved",approvalDate:{[Op.between]:[dateRange.weekStart, dateRange.weekEnd]}},
             attributes: [
             [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
             ],
@@ -300,7 +299,7 @@ const totalApprovalDashboard= async (req,res)=>{
             raw: true 
             })
 
-        let liveAmount =await operationalModel.findAll({ where:{approvalDate:today},
+        let liveAmount =await operationalModel.findAll({ where:{applicationStatus:"approved",approvalDate:today},
             attributes: [
             [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
             ],
