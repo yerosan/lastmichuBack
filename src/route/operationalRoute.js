@@ -11,5 +11,6 @@ router.delete("/deleteData/:operationalId", operationalController.deleteOperatio
 router.post("/totalData", operationalController.totalApprovalDashboard)
 router.post("/totalApprovalPerUser", operationalController.getOperationalDataPerUserTotal)
 router.post("/userStatus", operationalController.OperationalDataPerUser)
+router.post("/singleUserStatus", operationalController.UserOperationalData)
 
 module.exports = router

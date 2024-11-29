@@ -3,7 +3,6 @@ const operationalModel= require ("../models/operationalModel")
 const {Op,DATEONLY}= require("sequelize")
 const sequelize=require("sequelize")
 const userModel=require("../models/userModel")
-
 const addOperationalData= async(req, res)=>{
     const datas=req.body
     if(! datas.customerName || !datas.savingAccount || !datas.customerPhone || !datas.applicationStatus || !datas.approvalDate ||
@@ -82,17 +81,26 @@ const getOperationalDataPerUserTotal=async(req, res)=>{
                 await Promise.all(
                 allUser.map( async userData=>{
                     let userId=userData.user
-                    const getUserData= await operationalModel.findAll ({where:{userId:userId,applicationStatus:"approved", approvalDate:{[Op.between]:[data.startDate, data.endDate]}},
+                    const getUserData= await operationalModel.findAll ({where:{userId:userId,applicationStatus:"approved",
+                         approvalDate:{[Op.between]:[data.startDate, data.endDate]}},
                         attributes: [
                             [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
                             ],
                             raw:true
                     })
+
+                    let allApprovedCustomer=await operationalModel.count({"DISTINCT":"customerPhone", 
+                        where:{userId:userId, applicationStatus:"approved",
+                            approvalDate:{[Op.between]:[data.startDate, data.endDate]}}})
+
+                    // console.log("The Total Approved ,",fullName, allApprovedCustomer)
                     let user= await userModel.findOne({where:{userId:userId}})
                     let fullName=user.dataValues.fullName
-                    if(getUserData[0].totalSum){
-                        allUserStatus[fullName]=getUserData[0].totalSum
+                    if(allApprovedCustomer){
+                        allUserStatus[fullName]=allApprovedCustomer
                        
+                    }else{
+                        allUserStatus[fullName]=0;
                     }
                 }))
                 
@@ -147,6 +155,55 @@ const OperationalDataPerUser=async(req, res)=>{
 
                 res.status(200).json({message:"Data do not found"})
             } 
+        }catch(error){
+            console.log("The error", error)
+            res.status(200).json({message:"An internal error"})
+        }
+    
+
+}
+
+
+
+const UserOperationalData=async(req, res)=>{
+    const dateRange=req.body
+    // const alluserDatas=[]
+    const UserStatus={}
+        try{
+            let userId=dateRange.userId
+            let allUser= await operationalModel.findOne({ where:{approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]},
+            userId:userId}
+            })
+
+            let user= await userModel.findOne({where:{userId:userId}})
+            let fullName=user.dataValues.fullName
+           if(allUser && user){
+            let allApprovedCustomer=await operationalModel.count({"DISTINCT":"customerPhone", where:{userId:userId, applicationStatus:"approved",approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+            let allCustomer=await operationalModel.count({"DISTINCT":"customerPhone", where:{userId:userId, approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
+            
+            const approvedAmountUserData= await operationalModel.findAll({where:{userId:userId, applicationStatus:"approved", approvalDate:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                attributes: [
+                    [sequelize.fn('SUM', sequelize.col('approvedAmount')), 'totalSum']
+                    ],
+                    raw:true
+            })
+            if(approvedAmountUserData[0].totalSum){
+                UserStatus.approvedCustomer=allApprovedCustomer
+                UserStatus.totalApplicant=allCustomer
+                UserStatus.approvedAmount=approvedAmountUserData[0].totalSum
+                UserStatus.officerName=fullName
+                res.status(200).json({message:"succeed", data:UserStatus})
+            }else{
+                UserStatus.approvedCustomer=allApprovedCustomer
+                UserStatus.totalApplicant=allCustomer
+                UserStatus.approvedAmount=0
+                UserStatus.officerName=fullName
+                res.status(200).json({message:"succeed", data:UserStatus})
+            }
+           }else{
+            res.status(200).json(({message:"Data not exist"}))
+           }
+            // } 
         }catch(error){
             console.log("The error", error)
             res.status(200).json({message:"An internal error"})
@@ -399,5 +456,5 @@ module.exports={addOperationalData, getOperationalData,
     getOperationalDataPerUser, getUserLiveData,
     updateOperationalData, deleteOperationalData,
     totalApprovalDashboard,getOperationalDataPerUserTotal,
-    OperationalDataPerUser
+    OperationalDataPerUser, UserOperationalData
 }
