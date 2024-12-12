@@ -10,7 +10,6 @@ const addRole=async(req,res)=>{
             roleModel.sync()
             let user= await userModel.findOne({where:{userName:roleData.userName}})
              if(user){
-                console.log('thi is user', user)
                 let checkUser= await roleModel.findOne({where:{userId:user.dataValues.userId}})
                 if(!checkUser){
                     roleData.userId=user.dataValues.userId
@@ -37,8 +36,7 @@ const updateRole=async(req, res)=>{
     try{
         if(updateData.userId){
             let roleUpdate= await roleModel.update(updateData,{where:{userId:updateData.userId}})
-            console.log("this is userRole", roleUpdate)
-            if(roleUpdate){
+            if(roleUpdate[0]==1){
                 res.status(200).json({message:"succeed", data:roleUpdate})
             }
                 

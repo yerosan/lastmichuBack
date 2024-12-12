@@ -43,6 +43,11 @@ const roleModel=sequelize.define("role", {
         allowNull:false,
         defaultValue:false
     },
+    reconciliationUser:{
+        type:Sequelize.BOOLEAN,
+        allowNull:false,
+        defaultValue:false
+    }
 })
 
 module.exports=roleModel
