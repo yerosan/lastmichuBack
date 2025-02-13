@@ -1,0 +1,4 @@
+branch_code,loan_id,customer_name,phone_number,customer_number,saving_account,product_type,approved_amount,approved_date,maturity_date,outstanding_balance,due_principal,due_interest,due_penalty,total_dueAmount,arrears_start_date,number_of_days_inArrears
+ET0010002,eac73b11-1068-4a61-a1c7-512709b1a6eb,Melat Shambel Debesaw,251910000000,1010313237,1008800000000,Michu_Wabbii,5000,2025-02-03,2025-02-02,40000,39380,3830,203,45390,2025-02-03,4
+,dfd61612-537f-4495-a8cf-c5f25a2f3cf9,Melat Birihanu Beyene,251943000000,251943000000,1008300000000,Michu_Kiyya_Formal,6000,2025-02-01,2025-02-02,45000,3839,1276,282,4657,2025-02-04,3
+ET0010002,a59ea400-5eab-4106-9fa0-c22b58a0c0bam,Melat Birihanu Beyene,251943000000,251943000000,1008300000000,Michu_Kiyya_Informal,6000,2025-02-01,2025-02-02,45000,3839,1276,282,4657,2025-02-04,3

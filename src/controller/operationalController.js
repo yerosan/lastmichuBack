@@ -12,7 +12,7 @@ const addOperationalData= async(req, res)=>{
     }else{
         try{
             await operationalModel.sync()
-            const checkData= await operationalModel.findOne({where:{customerPhone:datas.customerPhone,applicationStatus:"approved", userId:datas.userId, approvaldate:datas.approvalDate }})
+            const checkData= await operationalModel.findOne({where:{customerPhone:datas.customerPhone,applicationStatus:"approved", approvaldate:datas.approvalDate }})
             if(checkData){
                 res.status(200).json({message:'Customer data already exist'})
             }else{

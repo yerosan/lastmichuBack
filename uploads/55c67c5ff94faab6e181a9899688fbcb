@@ -1,0 +1,7 @@
+branch_code,loan_id,customer_name,phone_number,customer_number,saving_account,product_type,approved_amount,approved_date,maturity_date,outstanding_balance,due_principal,due_interest,due_penalty,total_dueAmount,arrears_start_date,number_of_days_inArrears
+ET0010002,8d1d7d21-53c8-4866-a30e-838d0e618aff,Melat Shambel Debesaw,2.5191E+11,1010313237,1.0088E+12,Michu_Wabii,5678,2/3/2025,2/2/2025,40000,39380,3830,203,45390,2/3/2025,4
+ET0010002,ba3ce764-c553-4f08-aaff-11d95be8d941,Melat Birihanu Beyene,2.51943E+11,2.51943E+11,1.0083E+12,Michu_Kiyya_Formal,5678,2/1/2025,2/2/2025,45000,3839,1276,282,4657,2/4/2025,3
+ET0010002,bacb18fe-279a-4107-9014-c5768ce2582d,Melat Birihanu Beyene,2.51943E+11,2.51943E+11,1.0083E+12,Michu_Kiyya_Formal,45907,2/1/2025,2/2/2025,45000,3839,1276,282,4657,2/4/2025,3
+ET0010002,8d1d7d21-53c8-4866-a30e-838d0e618afr,Melat Shambel Debesaw,2.5191E+11,1010313237,1.0088E+12,Michu_Guyya,5678,2/3/2025,2/2/2025,40000,39380,3830,203,45390,2/3/2025,4
+ET0010002,8d1d7d21-53c8-4866-a30e-838d0e618afs,Melat Shambel Debesaw,2.5191E+11,1010313237,1.0088E+12,Michu_Guyya,5678,2/3/2025,2/2/2025,40000,39380,3830,203,45390,2/3/2025,4
+ET0010002,8ed21d0f-f833-4acf-b3cb-5eedf7aec1ghh,Melat Shambel Debesaw,2.5191E+11,1010313237,1.0088E+12,Michu_01,5678,2/3/2025,2/2/2025,40000,39380,3830,203,45390,2/3/2025,4

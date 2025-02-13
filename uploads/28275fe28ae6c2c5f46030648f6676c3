@@ -1,0 +1,3 @@
+branch_code,loan_id,customer_name,phone_number,customer_number,saving_account,product_type,approved_amount,approved_date,maturity_date,outstanding_balance,due_principal,due_interest,due_penalty,total_dueAmount,arrears_start_date,number_of_days_inArrears
+ET0010002,45ecb2b2-f909-4c72-adbb-cf2822883fa8,Melat Shambel Debesaw,251910000000,gutama kenne,1008800000000,Michu_Wabii,5000,2025-02-03,2025-02-02,40000,39380,3830,203,45390,2025-02-03,4
+ET0010002,e814de4f-2576-11ef-be93-0a8448ae1c4d,Melat Birihanu Beyene,251943000000,gudisa jorji,1008300000000,Michu_Kiyya_Formal,6000,2025-02-01,2025-02-02,45000,3839,1276,282,4657,2025-02-04,3

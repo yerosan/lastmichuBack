@@ -9,6 +9,13 @@ const sequeledb=require("../db/db")
 const { where,Op } = require("sequelize")
 const { raw } = require("body-parser")
 const moment = require('moment'); // For date manipulation
+
+
+// Define the association
+userModel.hasMany(collectionController, { foreignKey: "userId", as: "collections" });
+collectionController.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+
+
 const addColletionData=async(req, res)=>{
     const dataSet=req.body
     if(!dataSet.userName || 
@@ -74,110 +81,87 @@ const addColletionData=async(req, res)=>{
     }
 }
 
-const CollectetionPerUser=async(req, res)=>{
-    const userName=req.params.userName
-    const currentDate=new Date()
-    const currentMonth=currentDate.getMonth()+1
-    const currentYear=currentDate.getFullYear()
-    const currentDay=currentDate.getDate()
-    const month = `0${currentMonth}`.slice(-2);
-    const day = `0${currentDay}`.slice(-2);
-    const today=`${currentYear}-${month}-${day}`;
-    let previousDate = new Date(currentDate.getTime() - (24 * 60 * 60 * 1000));
-    const previousMonth = (currentMonth === 1) ? 12 : currentMonth - 1;
-    const previousYear = (currentMonth === 1) ? currentYear - 1 : currentYear;
 
-    const userStatus={}
-    const theData=[]
-    dateList=[]
-    try{
-        let user= await userModel.findOne({where:{userName:userName}})
-        if(user){
-            // await performanceModel.sync()
-            await collectionController.sync()
-            let liveCollection=await collectionController.findAll({where:{date:today, userId:user.dataValues.userId},
-                attributes: [
-                    [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
-                ],
-                raw:true
-                })
-            let liveAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:today, callResponce:"paid"}})
-            userStatus.liveAccount=liveAccount
-            if(liveCollection[0].totalSum){
-            userStatus.liveCollection=liveCollection[0].totalSum
-            }else{
-                userStatus.liveCollection=0
-            }
 
-            const topRecentDate = await collectionController.findAll({
-                order: [['date', 'DESC']], // Get the most recent date first
-                attributes: ['date'] // Only retrieve the date column
-            })
 
-            let collectionDate= await collectionController.findAll({
-                attributes: [[sequelize.fn('DISTINCT', sequelize.col('date')), "uniqueDate"]],
-                raw: true // Get raw data instead of Sequelize instances
-                })
-            const valuesOnly = collectionDate.map(item => item.uniqueDate);
-            const sortedValues = valuesOnly.sort((a, b) => new Date(b)-new Date(a));
-            lastDateData=await collectionController.findAll({order:[["date", "DESC"]]})
-            if(lastDateData.length>0){
-                if(today==sortedValues[0]){
-                    previousDate=sortedValues[1]
-                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:'paid'}})
-                    userStatus.previousAccount=previousAccount
-                    if(previousDate){
-                        let yesterdayColletion= await collectionController.findAll({where:{date:previousDate, userId:user.dataValues.userId},
-                            attributes: [
-                                [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
-                            ],
-                            raw:true
-                            })
-                        if(yesterdayColletion[0].totalSum){
-                            userStatus.previousColletion=yesterdayColletion[0].totalSum
-                            res.status(200).json({message:"succed", data:userStatus})
-                        }else{
-                            userStatus.previousColletion=0
-                            res.status(200).json({message:"succed", data:userStatus})
-                        }
-                    }
-                    else{
-                        userStatus.previousColletion=0
-                        res.status(200).json({message:"succed", data:userStatus})
-                    }
 
-                }else{
-                    previousDate=sortedValues[0]
-                    let yesterdayColletion= await collectionController.findAll({where:{date:previousDate, userId:user.dataValues.userId},
-                        attributes: [
-                            [sequelize.fn('SUM', sequelize.col('payedAmount')), 'totalSum']
-                        ],
-                        raw:true
-                        })
-                    let previousAccount= await collectionController.count({"DISTINCT":"customerPhone", where:{date:previousDate, callResponce:"paid"}})
-                    userStatus.previousAccount=previousAccount
-                    if(yesterdayColletion[0].totalSum){
-                        userStatus.previousColletion=yesterdayColletion[0].totalSum
-                        res.status(200).json({message:"succed", data:userStatus})
-                    }else{
-                        userStatus.previousColletion=0
-                        res.status(200).json({message:"succed", data:userStatus})
-                        
-                    }
-                }
-           }else{
-                userStatus.previousColletion=0
-                res.status(200).json({message:"succed", data:userStatus})
-           }
-        }else{
-            res.status(200).json({message:"User doesn't exist"})
+
+const CollectetionPerUser = async (req, res) => {
+    const userName = req.params.userName;
+    const currentDate = new Date();
+    const today = currentDate.toISOString().split("T")[0]; // Format YYYY-MM-DD
+    let previousDate = new Date(currentDate);
+    previousDate.setDate(currentDate.getDate() - 1);
+    previousDate = previousDate.toISOString().split("T")[0];
+
+    try {
+        // Fetch user details in a single query
+        const user = await userModel.findOne({ where: { userName } });
+        if (!user) {
+            return res.status(200).json({ message: "User doesn't exist" });
         }
-    }catch(error){
-        console.log("this is an error", error)
-        res.status(500).json({message:"An internal error"})
-    }
-}
 
+        const userId = user.userId;
+        const userStatus = {};
+
+        // Get today's collection summary
+        const liveCollection = await collectionController.findOne({
+            where: { date: today, userId },
+            attributes: [[sequelize.fn("SUM", sequelize.col("payedAmount")), "totalSum"]],
+            raw: true,
+        });
+        userStatus.liveCollection = liveCollection?.totalSum || 0;
+
+        // Get distinct count of paid accounts today
+        userStatus.liveAccount = await collectionController.count({
+            distinct: true,
+            col: "customerPhone",
+            where: { date: today, callResponce: "paid" },
+        });
+
+        // Get all distinct collection dates sorted in descending order
+        const collectionDates = await collectionController.findAll({
+            attributes: [[sequelize.fn("DISTINCT", sequelize.col("date")), "uniqueDate"]],
+            raw: true,
+            order: [["date", "DESC"]],
+        });
+
+        const sortedDates = collectionDates.map((item) => item.uniqueDate);
+        if (sortedDates.length > 0) {
+            // If today exists in records, get the previous recorded date
+            if (sortedDates[0] === today) {
+                previousDate = sortedDates[1] || null;
+            } else {
+                previousDate = sortedDates[0];
+            }
+        }
+
+        if (previousDate) {
+            // Get yesterday's collection summary
+            const previousCollection = await collectionController.findOne({
+                where: { date: previousDate, userId },
+                attributes: [[sequelize.fn("SUM", sequelize.col("payedAmount")), "totalSum"]],
+                raw: true,
+            });
+            userStatus.previousColletion = previousCollection?.totalSum || 0;
+
+            // Get distinct count of paid accounts yesterday
+            userStatus.previousAccount = await collectionController.count({
+                distinct: true,
+                col: "customerPhone",
+                where: { date: previousDate, callResponce: "paid" },
+            });
+        } else {
+            userStatus.previousColletion = 0;
+            userStatus.previousAccount = 0;
+        }
+
+        res.status(200).json({ message: "Success", data: userStatus });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ message: "An internal error" });
+    }
+};
 
 
 
@@ -819,50 +803,68 @@ const userCollection= async(req, res)=>{
 }
 
 
-const userCollectionDetail= async(req, res)=>{
-    const dateRange=req.body
-    try{
-        const allCollection =await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}, userId:dateRange.userId}})
-        if(allCollection.length>0){
-            await Promise.all(allCollection.map(async collectionData=>{
-               let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
-               if(user){
-                collectionData.dataValues.userName=user.dataValues.userName
-                collectionData.dataValues.officerName=user.dataValues.fullName
-               }
-            }))
-          res.status(200).json({message:"succeed", data:allCollection})
-        }else{
-            res.status(200).json({message:"Data doesn't exist"})
-        }
-    }catch(error){
-     console.log("The error", error)
-     res.status(500).json({message:"An internal error"})
-    }
-}
 
 
-const allCollection= async(req, res)=>{
-    const dateRange=req.body
-    try{
-        const allCollection =await collectionController.findAll({where:{date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
-        if(allCollection.length>0){
-            await Promise.all(allCollection.map(async collectionData=>{
-               let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
-               if(user){
-                collectionData.dataValues.userName=user.dataValues.userName
-                collectionData.dataValues.fullName=user.dataValues.fullName
-               }
-            }))
-          res.status(200).json({message:"succeed", data:allCollection})
-        }else{
-            res.status(200).json({message:"Data doesn't exist"})
-        }
-    }catch(error){
-     console.log("The error", error)
-     res.status(500).json({message:"An internal error"})
+const userCollectionDetail = async (req, res) => {
+    const { startDate, endDate, userId } = req.body;
+  
+    try {
+      // Fetch collection data and include user details in the same query
+      const allCollection = await collectionController.findAll({
+        where: {
+          date: { [Op.between]: [startDate, endDate] },
+          userId: userId,
+        },
+        include: [
+          {
+            model: userModel, // Joins User table
+            as: "user", // Must match Sequelize association alias
+            attributes: ["userId", "userName", "fullName"], // Fetch only necessary fields
+          },
+        ],
+      });
+  
+      if (allCollection.length > 0) {
+        res.status(200).json({ message: "Success", data: allCollection });
+      } else {
+        res.status(200).json({ message: "Data doesn't exist" });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      res.status(500).json({ message: "An internal error" });
     }
-}
+  };  
+
+
+
+const allCollection = async (req, res) => {
+    const { startDate, endDate } = req.body;
+  
+    try {
+      // Fetch collection data and join User data in one query
+      const allCollection = await collectionController.findAll({
+        where: {
+          date: { [Op.between]: [startDate, endDate] },
+        },
+        include: [
+          {
+            model: userModel, // Join user table
+            as: "user", // Make sure this matches the alias in Sequelize association
+            attributes: ["userId", "userName", "fullName"], // Fetch only needed fields
+          },
+        ],
+      });
+  
+      if (allCollection.length > 0) {
+        res.status(200).json({ message: "Success", data: allCollection });
+      } else {
+        res.status(200).json({ message: "Data doesn't exist" });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      res.status(500).json({ message: "An internal error" });
+    }
+  };  
 
 const collectionUpdate=async(req, res)=>{
     const updatingData=req.body

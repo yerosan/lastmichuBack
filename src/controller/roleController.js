@@ -1,6 +1,7 @@
 const { where } = require("sequelize")
 const roleModel=require("../models/roleModel")
 const userModel=require("../models/userModel")
+const officerMode=require("../models/activeOfficer")
 
 const addRole=async(req,res)=>{
     const roleData=req.body
@@ -74,4 +75,34 @@ const rolePerUser=async(req,res)=>{
 }
 
 
-module.exports={addRole, updateRole, rolePerUser}
+const collectionRole=async(req, res)=>{
+    try{
+        let allCollectionUser= await roleModel.findAll({where:{collectionUser:1},
+            attributes: ['userId']
+        })
+        if(allCollectionUser.length>0){
+            await Promise.all(allCollectionUser.map(async collectionData=>{
+                let user=await userModel.findOne({where:{userId:collectionData.dataValues.userId}})
+                let activeOfficer=await officerMode.findOne({where:{officerId:collectionData.dataValues.userId}})
+                if(user){
+                    collectionData.dataValues.userName=user.dataValues.userName
+                    collectionData.dataValues.fullName=user.dataValues.fullName
+                    if(activeOfficer){
+                        collectionData.dataValues.officerStatus=activeOfficer.dataValues.officerStatus
+                    }else{
+                        collectionData.dataValues.officerStatus="inactive"
+                    }
+                }
+            }))
+            res.status(200).json({message:"succeed", data:allCollectionUser})
+        }else{
+            res.status(200).json({message:"Data doesn't exist"})
+        }
+    }catch(error){
+        res.status(500).json({message:"An internal error"})
+        console.log("An error", error)
+    }
+}
+
+
+module.exports={addRole, updateRole, rolePerUser, collectionRole}
