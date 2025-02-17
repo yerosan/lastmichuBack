@@ -2,6 +2,7 @@ const Payment = require("../models/payments");
 const { DueLoanData, ActiveOfficers, UserInformations } = require("../models");
 const CollectionModel=require("../models/collectionModel")
 const sequelize = require("../db/db"); // Import your Sequelize instance
+const { Op } = require("sequelize");
 
 const addPayment = async (req, res) => {
     const transaction = await sequelize.transaction(); // Start a transaction
@@ -15,7 +16,7 @@ const addPayment = async (req, res) => {
             !dataSet.payment_amount ||
             !dataSet.payment_date
             ){ 
-                res.status(200).json({
+               return res.status(200).json({
                     status:"Erro",
                     message:"All field is required"})
             }
@@ -51,7 +52,7 @@ const addPayment = async (req, res) => {
         await transaction.commit();
 
         // Send the response back with success message
-        res.status(200).json({
+        return res.status(200).json({
             status:"Success",
             message: "Payment recorded successfully",
             data:{
@@ -107,7 +108,7 @@ const updatePayment = async (req, res) => {
         });
 
         if (updatedPayment[0] === 0) { // If no rows were updated
-            res.status(200).json({message:"Payment record not found."});
+            return res.status(200).json({message:"Payment record not found."});
         }
 
         // 2. Update the `collection_data` table based on `payment_id`
@@ -128,7 +129,7 @@ const updatePayment = async (req, res) => {
         });
 
         if (updatedCollectionData[0] === 0) { // If no rows were updated
-            res.status(200).json({
+           return res.status(200).json({
                 status:"Error",
                 message:"Collection data record not found."});
         }
@@ -137,7 +138,7 @@ const updatePayment = async (req, res) => {
         await transaction.commit();
 
         // Send the response back with success message
-        res.status(200).json({
+        return  res.status(200).json({
             status:"Success",
             message: "Payment updated successfully",
             data:{
@@ -192,7 +193,7 @@ const getPaymentsByDate = async (req, res) => {
                 message: "No payments found for the specified date." });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status:"Success",
             message: "Success",
             totalRecords: count,
@@ -222,7 +223,7 @@ const getPaymentsByOfficerAndDate = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const { count, rows: payments } = await Payment.findAndCountAll({
-            where: { payment_date },
+            where: { payment_date:{[Op.between]:[payment_date.startDate, payment_date.endDate] }},
             include: [
                 {
                     model: DueLoanData,
@@ -256,7 +257,7 @@ const getPaymentsByOfficerAndDate = async (req, res) => {
                 message: "No payments found for the specified officer and date." });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status:"Success",
             message: "Success",
             totalRecords: count,

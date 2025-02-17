@@ -143,9 +143,86 @@ const getAssignedLoans = async (req, res) => {
 
 
 
+// const getUserAssignedLoans = async (req, res) => {
+//     try {
+//         const { userId, date, page = 1, limit = 10, officer_id, product_type } = req.body;  
+
+//         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);  
+
+//         const excludedLoanIds = Sequelize.literal(`
+//             loan.loan_id NOT IN (
+//                 SELECT customer_interactions.loan_id FROM customer_interactions 
+//             ) 
+//             AND loan.loan_id NOT IN (
+//                 SELECT payments.loan_id FROM payments where payment_type="fully paid"
+//             )
+//         `);
+
+//         const { count, rows } = await AssignedLoans.findAndCountAll({
+//             where: {
+//                 assigned_date:{[Op.between]:[date.startDate, date.endDate]} ,
+//                 officer_id: officer_id,
+//                 [Op.and]: [excludedLoanIds]  
+//             },
+//             include: [
+//                 {
+//                     model: DueLoanData,
+//                     as: "loan",
+//                     attributes: { exclude: ["createdAt", "updatedAt"] }  
+//                 },
+//                 {
+//                     model: ActiveOfficers,
+//                     as: "officer",
+//                     attributes: ["officerId"],
+//                     required: true,  
+//                     include: [
+//                         {
+//                             model: UserInformations,
+//                             as: "userInfos",
+//                             attributes: ["userName", "fullName"],  
+//                             required: true
+//                         }
+//                     ]
+//                 }
+//             ],
+//             // order: [["createdAt", "DESC"]],
+//             attributes: ["assigned_id", "customer_phone", "assigned_date"],
+//             limit: parseInt(limit, 10),  
+//             offset: parseInt(offset, 10),  
+//             raw: true,  
+//             nest: true  
+//         });
+
+//         if (count > 0) {
+//             res.status(200).json({
+//                 status: "Success",
+//                 message: "Success",
+//                 totalRecords: count,  
+//                 totalPages: Math.ceil(count / limit),  
+//                 currentPage: parseInt(page, 10),
+//                 pageSize: parseInt(limit, 10),
+//                 data: rows
+//             });
+//         } else {
+//             res.status(200).json({ 
+//               status: "Error",
+//               message: "No customer left without attempting to connect." 
+//             });
+//         }
+
+//     } catch (error) {
+//         console.error("Error fetching assigned loans:", error);
+//         res.status(500).json({
+//            status: "Error",
+//            message: "Internal server error" });
+//     }
+// };
+
+
+
 const getUserAssignedLoans = async (req, res) => {
     try {
-        const { userId, date, page = 1, limit = 10, officer_id } = req.body;  
+        const { userId, date, page = 1, limit = 10, officer_id, product_type,search } = req.body;  
 
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);  
 
@@ -154,21 +231,28 @@ const getUserAssignedLoans = async (req, res) => {
                 SELECT customer_interactions.loan_id FROM customer_interactions 
             ) 
             AND loan.loan_id NOT IN (
-                SELECT payments.loan_id FROM payments where payment_type="fully paid"
+                SELECT payments.loan_id FROM payments WHERE payment_type = "fully paid"
             )
         `);
 
+        const loanFilter = {};  
+        if (product_type) {
+            loanFilter.product_type = product_type;  
+        }
+
         const { count, rows } = await AssignedLoans.findAndCountAll({
             where: {
-                assigned_date:{[Op.between]:[date.startDate, date.endDate]} ,
+                assigned_date: { [Op.between]: [date.startDate, date.endDate] },
                 officer_id: officer_id,
-                [Op.and]: [excludedLoanIds]  
+                [Op.and]: [excludedLoanIds],
+                ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
             },
             include: [
                 {
                     model: DueLoanData,
                     as: "loan",
-                    attributes: { exclude: ["createdAt", "updatedAt"] }  
+                    attributes: { exclude: ["createdAt", "updatedAt"] },  
+                    where: loanFilter  // Filtering by product_type if provided
                 },
                 {
                     model: ActiveOfficers,
@@ -186,6 +270,7 @@ const getUserAssignedLoans = async (req, res) => {
                 }
             ],
             attributes: ["assigned_id", "customer_phone", "assigned_date"],
+            order: [[Sequelize.col("loan.approved_amount"), "DESC"]],
             limit: parseInt(limit, 10),  
             offset: parseInt(offset, 10),  
             raw: true,  
@@ -204,16 +289,17 @@ const getUserAssignedLoans = async (req, res) => {
             });
         } else {
             res.status(200).json({ 
-              status: "Error",
-              message: "No customer left without attempting to connect." 
+                status: "Error",
+                message: "No customer left without attempting to connect." 
             });
         }
 
     } catch (error) {
         console.error("Error fetching assigned loans:", error);
         res.status(500).json({
-           status: "Error",
-           message: "Internal server error" });
+            status: "Error",
+            message: "Internal server error" 
+        });
     }
 };
 
@@ -227,7 +313,7 @@ const getUserAssignedLoansHistory = async (req, res) => {
 
       const { count, rows } = await AssignedLoans.findAndCountAll({
           where: {
-              assigned_date: date,
+              assigned_date: {[Op.between]:[date.startDate,date.endDate]},
               officer_id: officer_id,
               // [Op.and]: [excludedLoanIds]  
           },

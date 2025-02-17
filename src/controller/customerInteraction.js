@@ -172,7 +172,7 @@ const addInteraction = async (req, res) => {
         // ✅ Commit transaction if both inserts succeed
         await transaction.commit();
 
-        res.status(200).json({ 
+        return res.status(200).json({ 
             status:"Success",
             message: "Registration Successful", 
             interaction: newInteraction, 
@@ -258,7 +258,7 @@ const updateInteraction = async (req, res) => {
         await transaction.commit();
 
         // Return the success response with updated data
-        res.status(200).json({
+        return res.status(200).json({
             status:"Success",
             message: "Update successful",
             updatedInteraction: updatedInteractionData,
@@ -325,7 +325,7 @@ const getInteractionsByDate = async (req, res) => {
                 message: "No data found for the specified date." });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status:"Success",
             message: "Succeed",
             totalRecords: count,
@@ -411,7 +411,7 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "Success",
             message: "Query successful.",
             totalRecords: count,
@@ -514,7 +514,7 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "Success",
             message: "Query successful.",
             totalRecords: count,

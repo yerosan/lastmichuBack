@@ -6,8 +6,6 @@ const activeOfficerModle=require("../models/index")
 
 const activateOfficer=async(req, res)=>{
     const data=req.body
-
-    console.log("------------The officer active data-------", data)
     if(!data.officerStatus || !data.officerId){
         res.status(200).json({message:"All field is required"})
     }else{

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const csv = require("csv-parser");
 const multer = require("multer");
-const { Sequelize } = require("sequelize");
+const { Sequelize, where } = require("sequelize");
 const bulkAssignmentModel = require("../models/bulkAssignment");
 const Ajv = require("ajv");
 const { type } = require("os");
@@ -25,7 +25,7 @@ const schema = {
         product_type: 
         { type: "string",
              enum: ["Michu 1.0", "Michu Wabii",
-                 "Michu Kiyya - Formal"] },
+                 "Michu Kiyya - Formal",] },
         approved_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$"},
         maturity_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$"},
         outstanding_balance: { type: "number", minimum: 0 },
@@ -52,7 +52,7 @@ const addBulkData = async (req, res) => {
     try {
         rows = await parseCSV(filePath);
         if (rows.length === 0) {
-            return res.status(400).json({ message: "CSV file is empty" });
+            return res.status(200).json({ message: "CSV file is empty" });
         }
     } catch (error) {
         console.error("❌ Error parsing CSV:", error);
@@ -145,9 +145,10 @@ const gettingLoanByOfficer=async(req, res)=>{
     try{
         let allData=await bulkAssignmentModel.findAll({
             where:{
-                officer_name:data.officer_name
+                officer_name:data.officer_name,
+                uploaded_date:"2025-02-14"
             },
-            attributes:["loan_id", "phone_number", "officer_name"]
+            attributes:["loan_id", "phone_number", "officer_name","arrears_start_date"]
         })
 
         if(allData.length>0){
@@ -155,9 +156,9 @@ const gettingLoanByOfficer=async(req, res)=>{
             allData.map(async(item)=>{
                 await assignModel.AssignedLoans.create({
                     loan_id:item.dataValues.loan_id,
-                    officer_id:'c332c45d-6930-4a7f-b00f-197cdb205a6e',
+                    officer_id:'c2c2c486-4d2f-40bb-a0ac-e4ad4fdef545',
                     customer_phone:item.dataValues.phone_number,
-                    assigned_date:"2025-02-05"
+                    assigned_date:item.dataValues.arrears_start_date
                 })
             })
             return res.status(200).json({message:"Success", data:allData, totaldata:totalData})
