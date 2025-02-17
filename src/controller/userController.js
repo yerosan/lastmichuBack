@@ -146,4 +146,41 @@ const changePassword= async(req, res)=>{
 }
 }
 
-module.exports={registerUser,loginUser,changePassword,addUser, getUser}
+
+// Reset Password Endpoint
+const resetPassword = async (req, res) => {
+    const {userName,password, confirmation } = req.body;
+
+    if (!userName || !password || !confirmation) {
+        return res.status(200).json({ message: "All fields are required" });
+    }
+
+    if (password !== confirmation) {
+        return res.status(200).json({ message: "Passwords do not match" });
+    }
+
+    try {
+        // const user = await userModel.findOne({ where: { resetToken } });
+
+        // if (!user || new Date() > user.resetTokenExpires) {
+        //     return res.status(400).json({ message: "Invalid or expired token" });
+        // }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update the user's password and clear reset token
+        await userModel.update(
+            { password: hashedPassword},
+            { where: { userName: userName } }
+        );
+
+        return res.status(200).json({ message: "Password has been reset successfully" });
+
+    } catch (error) {
+        console.error("Reset password error:", error);
+        return res.status(500).json({ message: "An internal error occurred" });
+    }
+}
+
+module.exports={registerUser,loginUser,changePassword,addUser, getUser, resetPassword}
