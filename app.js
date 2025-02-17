@@ -220,6 +220,33 @@ app.use(
     })
 );
 
+
+// In your backend app.js
+// const cors = require('cors');
+
+// Development CORS configuration
+
+
+// CORS Middleware
+// app.use(
+//     cors({
+//         origin: `${appUrl}`,
+//         credentials: true,
+//     })
+// );
+
+
+// const corsOptions = {
+//     origin: ['http://localhost:4050', 'http://localhost:3000'], // Add all your frontend URLs
+//     credentials: true,
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+//     exposedHeaders: ['Content-Range', 'X-Content-Range']
+// };
+
+// app.use(cors(corsOptions));
+
+
 // 📌 Define Associations
 Refund.belongsTo(Complain, { foreignKey: "complainId", targetKey: "complainId" });
 Refund.belongsTo(UserInfo, { foreignKey: "userId", targetKey: "userId" });

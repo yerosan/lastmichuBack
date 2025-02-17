@@ -3,6 +3,7 @@ const collectionController=require("../models/collectionModel")
 const userModel=require("../models/userModel")
 const performanceModel=require("../models/collectionPerformance")
 const assignedCustomerModel=require("../models/customerAssinged")
+const dueLoanAssigned=require("../models/assignedLoans")
 const sequelize=require("sequelize")
 const querys=require("../query/collectionQuerys")
 const sequeledb=require("../db/db")
@@ -446,12 +447,25 @@ const totalCustomerPerUser=async(req, res)=>{
                     raw:true
                   })
                 let customertotal=await collectionController.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}}})
-                let totalAssignedCustomer=await assignedCustomerModel.findAll({where:{userId:userId,date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
-                    attributes:[
-                        [sequelize.fn("SUM",sequelize.col("totalAssignedCustomer")),"totalAssigned"]
+                // let totalAssignedCustomer=await dueLoanAssigned.findAll({where:{userId:userId,assigned_date:{[Op.between]:[dateRange.startDate, dateRange.endDate]}},
+                //     attributes:[
+                //         [sequelize.fn("SUM",sequelize.col("totalAssignedCustomer")),"totalAssigned"]
+                //     ],
+                //     raw:true
+                // })
+                let totalAssignedCustomer = await dueLoanAssigned.findAll({
+                    where: {
+                        officer_id: userId,
+                        assigned_date: {
+                            [Op.between]: [dateRange.startDate, dateRange.endDate]
+                        }
+                    },
+                    attributes: [
+                        [sequelize.fn("COUNT", sequelize.fn("DISTINCT", sequelize.col("loan_id"))), "totalAssigned"]
                     ],
-                    raw:true
-                })
+                    raw: true
+                });
+                
                 if(customertotal.length>0){
                     userHistory.totalAssigned = Number(totalAssignedCustomer[0].totalAssigned) ? Number(totalAssignedCustomer[0].totalAssigned) : 0;
                     userHistory.totalPaid=customerCount

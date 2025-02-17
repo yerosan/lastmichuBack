@@ -1,0 +1,104 @@
+2025-02-17 14:47:47: 🚀 Server is running on port 3000
+2025-02-17 14:47:49: ✅ Database successfully synced
+2025-02-17 14:50:17: 🚀 Server is running on port 3000
+2025-02-17 14:50:17: ✅ Database successfully synced
+2025-02-17 14:51:47: 🚀 Server is running on port 3000
+2025-02-17 14:51:50: ✅ Database successfully synced
+2025-02-17 15:05:03: 🚀 Server is running on port 3000
+2025-02-17 15:05:06: ✅ Database successfully synced
+2025-02-17 15:05:50: The error Error
+    at Query.run (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\dialects\mysql\query.js:52:25)
+    at C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\sequelize.js:315:28
+    at async MySQLQueryInterface.select (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async AssignedLoans.findAll (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\model.js:1140:21)
+    at async C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\src\controller\collectionController.js:456:45
+    at async Promise.all (index 8)
+    at async totalCustomerPerUser (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\src\controller\collectionController.js:436:33) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Unknown column 'AssignedLoans.userId' in 'where clause'
+      at Packet.asError (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packets\packet.js:728:17)
+      at Query.execute (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\commands\command.js:29:26)
+      at Connection.handlePacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:478:34)
+      at PacketParser.onPacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:97:12)
+      at PacketParser.executeStart (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packet_parser.js:75:16)
+      at Socket.<anonymous> (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:104:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'AssignedLoans.userId' in 'where clause'",
+    sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = 'ba3ce764-c553-4f08-aaff-11d95be8d941' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+    parameters: undefined
+  },
+  original: Error: Unknown column 'AssignedLoans.userId' in 'where clause'
+      at Packet.asError (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packets\packet.js:728:17)
+      at Query.execute (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\commands\command.js:29:26)
+      at Connection.handlePacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:478:34)
+      at PacketParser.onPacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:97:12)
+      at PacketParser.executeStart (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packet_parser.js:75:16)
+      at Socket.<anonymous> (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:104:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'AssignedLoans.userId' in 'where clause'",
+    sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = 'ba3ce764-c553-4f08-aaff-11d95be8d941' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+    parameters: undefined
+  },
+  sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = 'ba3ce764-c553-4f08-aaff-11d95be8d941' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+  parameters: {}
+}
+2025-02-17 15:05:53: The error Error
+    at Query.run (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\dialects\mysql\query.js:52:25)
+    at C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\sequelize.js:315:28
+    at async MySQLQueryInterface.select (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async AssignedLoans.findAll (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\sequelize\lib\model.js:1140:21)
+    at async C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\src\controller\collectionController.js:456:45
+    at async Promise.all (index 1)
+    at async totalCustomerPerUser (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\src\controller\collectionController.js:436:33) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Unknown column 'AssignedLoans.userId' in 'where clause'
+      at Packet.asError (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packets\packet.js:728:17)
+      at Query.execute (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\commands\command.js:29:26)
+      at Connection.handlePacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:478:34)
+      at PacketParser.onPacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:97:12)
+      at PacketParser.executeStart (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packet_parser.js:75:16)
+      at Socket.<anonymous> (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:104:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'AssignedLoans.userId' in 'where clause'",
+    sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = '09bad46c-f6d1-4e8e-8ac2-156a820d41ae' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+    parameters: undefined
+  },
+  original: Error: Unknown column 'AssignedLoans.userId' in 'where clause'
+      at Packet.asError (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packets\packet.js:728:17)
+      at Query.execute (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\commands\command.js:29:26)
+      at Connection.handlePacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:478:34)
+      at PacketParser.onPacket (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:97:12)
+      at PacketParser.executeStart (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\packet_parser.js:75:16)
+      at Socket.<anonymous> (C:\Users\Coop\Desktop\por\MichuCollection\MichuCollection\lastmichuBack\node_modules\mysql2\lib\connection.js:104:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'AssignedLoans.userId' in 'where clause'",
+    sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = '09bad46c-f6d1-4e8e-8ac2-156a820d41ae' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+    parameters: undefined
+  },
+  sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = '09bad46c-f6d1-4e8e-8ac2-156a820d41ae' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
+  parameters: {}
+}

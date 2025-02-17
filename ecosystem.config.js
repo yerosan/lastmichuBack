@@ -34,7 +34,7 @@ module.exports = {
       name: "michu",
       script: "app.js",
       instances: Math.max(1, os.cpus().length - 1), // Uses (CPU count - 1) cores
-      exec_mode: "cluster", // Run in cluster mode
+    //   exec_mode: "cluster", // Run in cluster mode
       watch: false, // Disable watch in production
       max_memory_restart: "1G",
 
