@@ -465,6 +465,7 @@ const totalCustomerPerUser=async(req, res)=>{
                     ],
                     raw: true
                 });
+
                 
                 if(customertotal.length>0){
                     userHistory.totalAssigned = Number(totalAssignedCustomer[0].totalAssigned) ? Number(totalAssignedCustomer[0].totalAssigned) : 0;

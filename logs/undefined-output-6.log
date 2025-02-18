@@ -102,3 +102,6 @@
   sql: "SELECT COUNT(DISTINCT(`loan_id`)) AS `totalAssigned` FROM `assigned_loans` AS `AssignedLoans` WHERE `AssignedLoans`.`userId` = '09bad46c-f6d1-4e8e-8ac2-156a820d41ae' AND `AssignedLoans`.`assigned_date` BETWEEN '2025-02-17' AND '2025-02-17';",
   parameters: {}
 }
+2025-02-18 04:13:14: 🚀 Server is running on port 3000
+2025-02-18 04:14:59: 🚀 Server is running on port 3000
+2025-02-18 04:14:59: ✅ Database successfully synced

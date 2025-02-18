@@ -8,7 +8,7 @@ const dbSequelize=new Sequelize(
     {
      dialect:"mysql",
     //  host:"localhost",
-    host:"10.12.51.21",
+    // host:"10.12.51.21",
     logging: false,
     dialectOptions: {
         connectTimeout: 60000, // 60 seconds

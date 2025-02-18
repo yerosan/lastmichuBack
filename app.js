@@ -205,6 +205,8 @@ const app = express();
 app.use(express.json());
 app.use(helmet());
 
+// pm2 start ecosystem.config.js
+
 // 🌍 CORS Setup
 const allowedOrigins = [`${appUrl}`, "http://localhost:3000", "https://your-production-url.com"];
 app.use(

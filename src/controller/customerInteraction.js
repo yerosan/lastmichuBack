@@ -363,7 +363,7 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
             call_status:"Contacted",
             ...(call_response && { call_response }),
             // call_response: callResponse ? { [Op.like]: `%${callResponse}%` } : { [Op.ne]: null },
-            ...(search && { phone_number: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
+            ...(search && { phone_number: search }),  // Dynamically add search condition if provided
         };
 
         // Exclude loans that are "Fully Paid"

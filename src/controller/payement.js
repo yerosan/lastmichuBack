@@ -2,12 +2,12 @@ const Payment = require("../models/payments");
 const { DueLoanData, ActiveOfficers, UserInformations } = require("../models");
 const CollectionModel=require("../models/collectionModel")
 const sequelize = require("../db/db"); // Import your Sequelize instance
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
+const { search } = require("../route/payment");
 
 const addPayment = async (req, res) => {
     const transaction = await sequelize.transaction(); // Start a transaction
     try {
-
         const dataSet=req.body
         if(!dataSet.officer_id || 
             !dataSet.phone_number ||
@@ -21,49 +21,68 @@ const addPayment = async (req, res) => {
                     message:"All field is required"})
             }
 
-        // 1. Insert into `payment` table
-        const newPayment = await Payment.create({
-            phone_number:dataSet.phone_number,
-            loan_id:dataSet.loan_id,
-            payment_type:dataSet.payment_type,
-            payment_amount:dataSet.payment_amount,
-            remaining_balance:dataSet.remaining_balance || 0,
-            payment_date:dataSet.payment_date,
-            officer_id:dataSet.officer_id
-        }, { transaction });
-
-
-         // ✅ Insert into `collection_data` using the same `interaction_id`
-         const newCollectionData = await CollectionModel.create({
-            userId: dataSet.officer_id, 
-            customerName: dataSet.customer_name || "Unknown", // Default if not provided
-            customerPhone: dataSet.phone_number,
-            customerAccount: dataSet.saving_account || dataSet.loan_id, // Linking loan_id as customerAccount
-            payedAmount:dataSet.payment_amount,
-            callResponce: "paid",
-            productType: dataSet.productType || "loandId", // Optional field
-            paymentStatus:dataSet.payment_type,
-            collectionId: newPayment.payment_id, // Linking with interaction_id from the previous insert,
-            date:dataSet.payment_date
-        }, { transaction });
-
-
-        // Commit transaction if both operations are successful
-        await transaction.commit();
-
-        // Send the response back with success message
-        return res.status(200).json({
-            status:"Success",
-            message: "Payment recorded successfully",
-            data:{
-                  payment: newPayment,
-                  collectionData: newCollectionData
+            let paymentExistance = await Payment.findOne({
+                where: {
+                    loan_id: dataSet.loan_id,
+                    payment_type: {
+                        [Op.or]: ["fully paid", "Fully Paid"]
+                    }
                 }
+            });
             
-        });
+
+        if(paymentExistance){
+                    return res.status(200).json({
+                        status:"Error",
+                        message:"This loan is already paid"
+                  })
+
+                }else{
+                            // 1. Insert into `payment` table
+                const newPayment = await Payment.create({
+                    phone_number:dataSet.phone_number,
+                    loan_id:dataSet.loan_id,
+                    payment_type:dataSet.payment_type,
+                    payment_amount:dataSet.payment_amount,
+                    remaining_balance:dataSet.remaining_balance || 0,
+                    payment_date:dataSet.payment_date,
+                    officer_id:dataSet.officer_id
+                }, { transaction });
+
+
+                // ✅ Insert into `collection_data` using the same `interaction_id`
+                const newCollectionData = await CollectionModel.create({
+                    userId: dataSet.officer_id, 
+                    customerName: dataSet.customer_name || "Unknown", // Default if not provided
+                    customerPhone: dataSet.phone_number,
+                    customerAccount: dataSet.saving_account || dataSet.loan_id, // Linking loan_id as customerAccount
+                    payedAmount:dataSet.payment_amount,
+                    callResponce: "paid",
+                    productType: dataSet.productType || "loandId", // Optional field
+                    paymentStatus:dataSet.payment_type,
+                    collectionId: newPayment.payment_id, // Linking with interaction_id from the previous insert,
+                    date:dataSet.payment_date
+                }, { transaction });
+
+
+                // Commit transaction if both operations are successful
+                await transaction.commit();
+
+                // Send the response back with success message
+                return res.status(200).json({
+                    status:"Success",
+                    message: "Payment recorded successfully",
+                    data:{
+                        payment: newPayment,
+                        collectionData: newCollectionData
+                        }
+                    
+                });
+        }
 
     } catch (error) {
         // Rollback transaction in case of any error
+        console.error("Error adding payment:", error);
         await transaction.rollback();
         res.status(500).json({ 
             status:"Error",
@@ -211,9 +230,9 @@ const getPaymentsByDate = async (req, res) => {
 };
 
 // ✅ Get Payments by Officer and Date
-const getPaymentsByOfficerAndDate = async (req, res) => {
+const getPaymentsByOfficerAndDate = async (req, res) => {  
     try {
-        const { officer_id, payment_date, page = 1, limit = 10 } = req.body; // Pagination defaults
+        const { officer_id, payment_date, page = 1, limit = 10 , search} = req.body; // Pagination defaults
         if (!officer_id || !payment_date) {
             return res.status(200).json({ 
                 status:"Error",
@@ -223,7 +242,9 @@ const getPaymentsByOfficerAndDate = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const { count, rows: payments } = await Payment.findAndCountAll({
-            where: { payment_date:{[Op.between]:[payment_date.startDate, payment_date.endDate] }},
+            where: { payment_date:{[Op.between]:[payment_date.startDate, payment_date.endDate]
+              
+             },  ...(search && { phone_number: search}),},
             include: [
                 {
                     model: DueLoanData,
