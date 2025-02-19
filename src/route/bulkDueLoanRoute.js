@@ -19,7 +19,7 @@ const upload = multer({ dest: "uploads/" });
 
 // 📤 Upload CSV Route
 router.post("/upload", upload.single("file"), dueLoanController.addBulkData);
-router.post("/collecyionUpload", upload.single("file"), actualDataUpload.addBulkActualCollection);
+router.post("/collectionUpload", upload.single("file"), actualDataUpload.addBulkActualCollection);
 router.post("/getDueLoan", dueLoanController.gettingLoanByOfficer);
 
 module.exports = router;

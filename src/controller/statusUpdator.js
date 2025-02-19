@@ -12,14 +12,14 @@ const updateLoanStatus = async (req, res) => {
         `);
 
         return res.status(200).json({
-            success: true,
+            status: "succeed",
             message: "✅ Loan status updated successfully.",
             updatedRows: metadata.affectedRows || 0
         });
     } catch (error) {
         console.error("❌ Error updating loan status:", error);
         return res.status(500).json({
-            success: false,
+            status: "Error",
             message: "❌ Failed to update loan status.",
             error: error.message
         });
