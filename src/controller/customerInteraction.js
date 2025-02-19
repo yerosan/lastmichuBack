@@ -380,7 +380,8 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
                 {
                     model: DueLoanData,
                     as: "loan",
-                    attributes: { exclude: ["createdAt", "updatedAt"] }
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
+                    where:{collection_status:"Active"}
                 },
                 {
                     model: ActiveOfficers,
@@ -483,7 +484,8 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
                 {
                     model: DueLoanData,
                     as: "loan",
-                    attributes: { exclude: ["createdAt", "updatedAt"] }
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
+                    where:{collection_status:"Active"}
                 },
                 {
                     model: ActiveOfficers,
@@ -533,7 +535,261 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
 };
 
 
+
+
+const getNotContactedInteractionsByOfficer = async (req, res) => {
+    try {
+        const { officer_id, page = 1, limit = 10, search, call_response } = req.body;
+
+        // Validate required fields
+        if (!officer_id) {
+            return res.status(400).json({
+                status: "Error",
+                message: "Officer ID is required."
+            });
+        }
+
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+        // Subquery to get the most recent interaction for each loan
+        const latestInteractionsSubquery = `
+            SELECT ci1.*
+            FROM customer_interactions ci1
+            INNER JOIN (
+                SELECT loan_id, MAX(createdAt) as latest_date
+                FROM customer_interactions
+                GROUP BY loan_id
+            ) ci2 ON ci1.loan_id = ci2.loan_id 
+            AND ci1.createdAt = ci2.latest_date
+            WHERE ci1.call_status = 'Not contacted'
+        `;
+
+        // Exclude fully paid loans
+        const excludedLoanIds = Sequelize.literal(`
+            customer_interactions.loan_id NOT IN (
+                SELECT payments.loan_id FROM payments WHERE payment_type = "Fully Paid"
+            )
+        `);
+
+        const whereClause = {
+            officer_id,
+            [Op.and]: [
+                excludedLoanIds,
+                Sequelize.literal(`customer_interactions.interaction_id IN (${latestInteractionsSubquery})`)
+            ],
+            ...(call_response && { call_response }),
+            ...(search && { phone_number: { [Op.like]: `%${search}%` } })
+        };
+
+        // Fetch interactions
+        const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
+            where: whereClause,
+            include: [
+                {
+                    model: DueLoanData,
+                    as: "loan",
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
+                    required: true
+                },
+                {
+                    model: ActiveOfficers,
+                    as: "officer",
+                    attributes: ["officerId"],
+                    required: true,
+                    include: [
+                        {
+                            model: UserInformations,
+                            as: "userInfos",
+                            attributes: ["userName", "fullName"],
+                            required: true
+                        }
+                    ]
+                }
+            ],
+            order: [["createdAt", "DESC"]],
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+            distinct: true,
+            raw: true,
+            nest: true
+        });
+
+        // Get interaction history for each loan
+        const interactionsWithHistory = await Promise.all(
+            interactions.map(async (interaction) => {
+                const history = await CustomerInteraction.findAll({
+                    where: { loan_id: interaction.loan_id },
+                    order: [["createdAt", "DESC"]],
+                    raw: true,
+                    limit: 5 // Get last 5 interactions for history
+                });
+
+                return {
+                    ...interaction,
+                    interaction_history: history
+                };
+            })
+        );
+
+        if (count === 0) {
+            return res.status(200).json({
+                status: "Error",
+                message: "No customers with recent not contacted status found."
+            });
+        }
+
+        return res.status(200).json({
+            status: "Success",
+            message: "Query successful.",
+            totalRecords: count,
+            currentPage: parseInt(page, 10),
+            totalPages: Math.ceil(count / limit),
+            data: interactionsWithHistory
+        });
+
+    } catch (error) {
+        console.error("Error fetching interactions:", error);
+        res.status(500).json({
+            status: "Error",
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+
+
+const getContactedInteractionsByOfficer = async (req, res) => {
+    try {
+        const { officer_id, page = 1, limit = 10, search, call_response } = req.body;
+
+        // Validate required fields
+        if (!officer_id) {
+            return res.status(400).json({
+                status: "Error",
+                message: "Officer ID is required."
+            });
+        }
+
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        // interaction_id
+        // Subquery to get the most recent interaction for each loan where status is Contacted
+        const latestInteractionsSubquery = `
+            SELECT ci1.*
+            FROM customer_interactions ci1
+            INNER JOIN (
+                SELECT loan_id, MAX(createdAt) as latest_date
+                FROM customer_interactions
+                GROUP BY loan_id
+            ) ci2 ON ci1.loan_id = ci2.loan_id 
+            AND ci1.createdAt = ci2.latest_date
+            WHERE ci1.call_status = 'Contacted'
+        `;
+
+        // Exclude fully paid loans
+        const excludedLoanIds = Sequelize.literal(`
+            customer_interactions.loan_id NOT IN (
+                SELECT payments.loan_id FROM payments WHERE payment_type = "Fully Paid"
+            )
+        `);
+
+        const whereClause = {
+            officer_id,
+            [Op.and]: [
+                excludedLoanIds,
+                Sequelize.literal(`customer_interactions.interaction_id IN (${latestInteractionsSubquery})`)
+            ],
+            ...(call_response && { call_response }),
+            ...(search && { phone_number: { [Op.like]: `%${search}%` } })
+        };
+
+        // Fetch interactions
+        const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
+            where: whereClause,
+            include: [
+                {
+                    model: DueLoanData,
+                    as: "loan",
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
+                    required: true
+                },
+                {
+                    model: ActiveOfficers,
+                    as: "officer",
+                    attributes: ["officerId"],
+                    required: true,
+                    include: [
+                        {
+                            model: UserInformations,
+                            as: "userInfos",
+                            attributes: ["userName", "fullName"],
+                            required: true
+                        }
+                    ]
+                }
+            ],
+            order: [["createdAt", "DESC"]],
+            limit: parseInt(limit, 10),
+            offset: parseInt(offset, 10),
+            distinct: true,
+            raw: true,
+            nest: true
+        });
+
+        // Get interaction history for each loan
+        const interactionsWithHistory = await Promise.all(
+            interactions.map(async (interaction) => {
+                const history = await CustomerInteraction.findAll({
+                    where: { loan_id: interaction.loan_id },
+                    order: [["createdAt", "DESC"]],
+                    raw: true,
+                    limit: 5 // Get last 5 interactions for history
+                });
+
+                return {
+                    ...interaction,
+                    interaction_history: history
+                };
+            })
+        );
+
+        if (count === 0) {
+            return res.status(200).json({
+                status: "Error",
+                message: "No customers with recent contacted status found."
+            });
+        }
+
+        return res.status(200).json({
+            status: "Success",
+            message: "Successfully retrieved contacted customers.",
+            totalRecords: count,
+            currentPage: parseInt(page, 10),
+            totalPages: Math.ceil(count / limit),
+            data: interactionsWithHistory
+        });
+
+    } catch (error) {
+        console.error("Error fetching contacted interactions:", error);
+        res.status(500).json({
+            status: "Error",
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+// You might want to export both controllers
+// module.exports = {
+//     getContactedInteractionsByOfficer,
+//     getNotContactedInteractionsByOfficer // from previous example
+// };
+
+
+
 module.exports = { addInteraction, getInteractionsByDate ,
                    updateInteraction, getInteractionsByOfficerAndDate,
-                   getNotContactedInteractionsByOfficerAndDate
+                   getNotContactedInteractionsByOfficerAndDate,
+                   getNotContactedInteractionsByOfficer,getContactedInteractionsByOfficer
+
                 };

@@ -1,4 +1,4 @@
-const { Model } = require("sequelize");
+const { Model, where } = require("sequelize");
 const { Op, Sequelize } = require("sequelize");
 const { AssignedLoans, DueLoanData, ActiveOfficers, UserInformations, CustomerInteraction, Payment } = require("../models");
 const _ = require("lodash");
@@ -235,7 +235,7 @@ const getUserAssignedLoans = async (req, res) => {
             )
         `);
 
-        const loanFilter = {};  
+        const loanFilter = {collection_status:"Active",};  
         if (product_type) {
             loanFilter.product_type = product_type;  
         }
@@ -253,6 +253,7 @@ const getUserAssignedLoans = async (req, res) => {
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },  
                     where: loanFilter  // Filtering by product_type if provided
+                    
                 },
                 {
                     model: ActiveOfficers,
@@ -270,7 +271,7 @@ const getUserAssignedLoans = async (req, res) => {
                 }
             ],
             attributes: ["assigned_id", "customer_phone", "assigned_date"],
-            order: [[Sequelize.col("loan.approved_amount"), "DESC"]],
+            order: [[Sequelize.col("loan.outstanding_balance"), "DESC"]],
             limit: parseInt(limit, 10),  
             offset: parseInt(offset, 10),  
             raw: true,  
@@ -313,7 +314,7 @@ const getUserAssignedLoansHistory = async (req, res) => {
 
       const { count, rows } = await AssignedLoans.findAndCountAll({
           where: {
-              assigned_date: {[Op.between]:[date.startDate,date.endDate]},
+            //   assigned_date: {[Op.between]:[date.startDate,date.endDate]},
               officer_id: officer_id,
               // [Op.and]: [excludedLoanIds]  
           },
@@ -321,7 +322,8 @@ const getUserAssignedLoansHistory = async (req, res) => {
               {
                   model: DueLoanData,
                   as: "loan",
-                  attributes: { exclude: ["createdAt", "updatedAt"] }  
+                  attributes: { exclude: ["createdAt", "updatedAt"] } ,
+                  where:{ collection_status:"Closed"} 
               },
               {
                   model: ActiveOfficers,
@@ -340,6 +342,7 @@ const getUserAssignedLoansHistory = async (req, res) => {
           ],
           attributes: ["assigned_id", "customer_phone", "assigned_date"],
           limit: parseInt(limit, 10),  
+          order: [[Sequelize.col("loan.outstanding_balance"), "DESC"]],
           offset: parseInt(offset, 10),  
           raw: true,  
           nest: true  

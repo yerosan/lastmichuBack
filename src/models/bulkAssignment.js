@@ -89,6 +89,11 @@ const LoanModel = sequelize.define("due_loan_datas", {
         allowNull: true,
         defaultValue: 0
     },
+    collection_status: {
+      type:DataTypes.ENUM("Active", "Closed"),
+      allowNull: false,
+      defaultValue: "Active",
+    },
     officer_name:{
         type:DataTypes.STRING,
         allowNull:true,
