@@ -345,43 +345,156 @@ const getInteractionsByDate = async (req, res) => {
 
 
 
+// const getInteractionsByOfficerAndDate = async (req, res) => {
+//     try {
+//         const { officer_id, date, page = 1, limit = 10, search,
+//              call_response,} = req.body; 
+//         if (!officer_id || !date) {
+//             return res.status(400).json({
+//                 status: "Error",
+//                 message: "Officer ID and Date are required."
+//             });
+//         }
+
+//         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+//         const whereClause = {
+//             officer_id,
+//             date:{[Op.between]:[date.startDate, date.endDate]},
+//             call_status:"Contacted",
+//             ...(call_response && { call_response }),
+//             // call_response: callResponse ? { [Op.like]: `%${callResponse}%` } : { [Op.ne]: null },
+//             ...(search && { phone_number: search }),  // Dynamically add search condition if provided
+//         };
+
+//         // Exclude loans that are "Fully Paid"
+//         const excludedLoanIds = Sequelize.literal(`
+//             customer_interactions.loan_id NOT IN (
+//                 SELECT payments.loan_id FROM payments WHERE payment_type = "Fully Paid"
+//             ) 
+//         `);
+
+//         whereClause[Op.and] = [excludedLoanIds];
+//         const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
+//             where: whereClause,
+//             include: [
+//                 {
+//                     model: DueLoanData,
+//                     as: "loan",
+//                     attributes: { exclude: ["createdAt", "updatedAt"] },
+//                     where:{collection_status:"Active"}
+//                 },
+//                 {
+//                     model: ActiveOfficers,
+//                     as: "officer",
+//                     attributes: ["officerId"],
+//                     required: true,
+//                     include: [
+//                         {
+//                             model: UserInformations,
+//                             as: "userInfos",
+//                             attributes: ["userName", "fullName"],
+//                             required: true
+//                         }
+//                     ]
+//                 }
+//             ],
+//             order: [["createdAt", "DESC"]],
+//             limit: parseInt(limit, 10),
+//             offset: parseInt(offset, 10),
+//             raw: true,
+//             nest: true
+//         });
+
+//         if (count === 0) {
+//             return res.status(200).json({
+//                 status: "Error",
+//                 message: "No data found for the specified criteria."
+//             });
+//         }
+
+//         return res.status(200).json({
+//             status: "Success",
+//             message: "Query successful.",
+//             totalRecords: count,
+//             currentPage: parseInt(page, 10),
+//             totalPages: Math.ceil(count / limit),
+//             data: interactions
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching interactions:", error);
+//         res.status(500).json({
+//             status: "Error",
+//             message: "Internal server error"
+//         });
+//     }
+// };
+
+
+
+
 const getInteractionsByOfficerAndDate = async (req, res) => {
     try {
-        const { officer_id, date, page = 1, limit = 10, search,
-             call_response,} = req.body; 
-        if (!officer_id || !date) {
-            return res.status(400).json({
+        const { officer_id, date, page = 1, limit = 10, search, call_response } = req.body;
+
+        if (!officer_id) {
+            return res.status(200).json({
                 status: "Error",
                 message: "Officer ID and Date are required."
             });
         }
 
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-        const whereClause = {
-            officer_id,
-            date:{[Op.between]:[date.startDate, date.endDate]},
-            call_status:"Contacted",
-            ...(call_response && { call_response }),
-            // call_response: callResponse ? { [Op.like]: `%${callResponse}%` } : { [Op.ne]: null },
-            ...(search && { phone_number: search }),  // Dynamically add search condition if provided
-        };
 
-        // Exclude loans that are "Fully Paid"
+
+                // Exclude loans that are "Fully Paid"
         const excludedLoanIds = Sequelize.literal(`
             customer_interactions.loan_id NOT IN (
                 SELECT payments.loan_id FROM payments WHERE payment_type = "Fully Paid"
             ) 
         `);
 
-        whereClause[Op.and] = [excludedLoanIds];
+        // whereClause[Op.and] = [excludedLoanIds];
+
+        // Get the latest "Contacted" interaction per customer
+        const recentInteractions = await CustomerInteraction.findAll({
+            attributes: [
+                "interaction_id",
+                [Sequelize.fn("MAX", Sequelize.col("createdAt")), "latestInteraction"]
+            ],
+            where: {
+                officer_id,
+                // date: { [Op.between]: [date.startDate, date.endDate] },
+                call_status: "Contacted",
+                [Op.and] : [excludedLoanIds]
+            },
+            group: ["interaction_id"],
+            raw: true
+        });
+
+        const latestInteractionTimestamps = recentInteractions.map(interaction => interaction.latestInteraction);
+
+        if (latestInteractionTimestamps.length === 0) {
+            return res.status(200).json({
+                status: "Error",
+                message: "No data found for the specified criteria."
+            });
+        }
+
+        // Query full data for the latest interactions
         const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
-            where: whereClause,
+            where: {
+                officer_id,
+                createdAt: { [Op.in]: latestInteractionTimestamps }, // Ensures only the most recent interactions are selected
+                ...(call_response && { call_response }),
+                ...(search && { phone_number: search })
+            },
             include: [
                 {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },
-                    where:{collection_status:"Active"}
+                    where: { collection_status: "Active" }
                 },
                 {
                     model: ActiveOfficers,
@@ -405,16 +518,9 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
             nest: true
         });
 
-        if (count === 0) {
-            return res.status(200).json({
-                status: "Error",
-                message: "No data found for the specified criteria."
-            });
-        }
-
         return res.status(200).json({
             status: "Success",
-            message: "Query successful.",
+            message: "Data generated successful.",
             totalRecords: count,
             currentPage: parseInt(page, 10),
             totalPages: Math.ceil(count / limit),
@@ -429,6 +535,7 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
         });
     }
 };
+
 
 
 
@@ -438,27 +545,17 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
 
 const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
     try {
-        const { officer_id, date, page = 1, limit = 10, search,
-             call_response,} = req.body; 
+        const { officer_id, date, page = 1, limit = 10, search, call_response } = req.body;
 
-        // console.log("==================The data========-----------", date,call_status, search, callResponse)
-
-        // Validate required fields
-        if (!officer_id || !date) {
-            return res.status(400).json({
+        if (!officer_id) {
+            return res.status(200).json({
                 status: "Error",
                 message: "Officer ID and Date are required."
             });
         }
 
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-        const whereClause = {
-            officer_id,
-            call_status:"Not contacted",
-            date:{[Op.between]:[date.startDate, date.endDate]},
-            ...(call_response && { call_response }),
-            ...(search && { phone_number: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
-        };
+
 
         // Exclude loans that are "Fully Paid"
         const excludedLoanIds = Sequelize.literal(`
@@ -467,25 +564,47 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
             ) 
         `);
 
-        // Apply filtering dynamically
-        // if (loan_status) {
-        //     whereClause[Op.and] = [
-        //         excludedLoanIds,
-        //         Sequelize.literal(`loan.loan_status = '${loan_status}'`)  // Dynamic loan status filter
-        //     ];
-        // } else {
-        whereClause[Op.and] = [excludedLoanIds];
-        // }
+        // whereClause[Op.and] = [excludedLoanIds];
 
-        // Fetch interactions
+        // Get the latest "Not contacted" interaction per customer
+        const recentInteractions = await CustomerInteraction.findAll({
+            attributes: [
+                "interaction_id",
+                [Sequelize.fn("MAX", Sequelize.col("createdAt")), "latestInteraction"]
+            ],
+            where: {
+                officer_id,
+                // date: { [Op.between]: [date.startDate, date.endDate] },
+                call_status: "Not contacted",
+                [Op.and] : [excludedLoanIds]
+            },
+            group: ["interaction_id"],
+            raw: true
+        });
+
+        const latestInteractionTimestamps = recentInteractions.map(interaction => interaction.latestInteraction);
+
+        if (latestInteractionTimestamps.length === 0) {
+            return res.status(200).json({
+                status: "Error",
+                message: "No data found for the specified criteria."
+            });
+        }
+
+        // Query full data for the latest interactions
         const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
-            where: whereClause,
+            where: {
+                officer_id,
+                createdAt: { [Op.in]: latestInteractionTimestamps }, // Ensures only the most recent interactions are selected
+                ...(call_response && { call_response }),
+                ...(search && { phone_number: search })
+            },
             include: [
                 {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },
-                    where:{collection_status:"Active"}
+                    where: { collection_status: "Active" }
                 },
                 {
                     model: ActiveOfficers,
@@ -509,16 +628,9 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
             nest: true
         });
 
-        if (count === 0) {
-            return res.status(200).json({
-                status: "Error",
-                message: "No data found for the specified criteria."
-            });
-        }
-
         return res.status(200).json({
             status: "Success",
-            message: "Query successful.",
+            message: "Data generated successful.",
             totalRecords: count,
             currentPage: parseInt(page, 10),
             totalPages: Math.ceil(count / limit),
@@ -533,6 +645,109 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
         });
     }
 };
+
+
+
+
+
+
+// const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
+//     try {
+//         const { officer_id, date, page = 1, limit = 10, search,
+//              call_response,} = req.body; 
+
+//         // console.log("==================The data========-----------", date,call_status, search, callResponse)
+
+//         // Validate required fields
+//         if (!officer_id || !date) {
+//             return res.status(400).json({
+//                 status: "Error",
+//                 message: "Officer ID and Date are required."
+//             });
+//         }
+
+//         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+//         const whereClause = {
+//             officer_id,
+//             call_status:"Not contacted",
+//             date:{[Op.between]:[date.startDate, date.endDate]},
+//             ...(call_response && { call_response }),
+//             ...(search && { phone_number: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
+//         };
+
+//         // Exclude loans that are "Fully Paid"
+//         const excludedLoanIds = Sequelize.literal(`
+//             customer_interactions.loan_id NOT IN (
+//                 SELECT payments.loan_id FROM payments WHERE payment_type = "Fully Paid"
+//             ) 
+//         `);
+
+//         // Apply filtering dynamically
+//         // if (loan_status) {
+//         //     whereClause[Op.and] = [
+//         //         excludedLoanIds,
+//         //         Sequelize.literal(`loan.loan_status = '${loan_status}'`)  // Dynamic loan status filter
+//         //     ];
+//         // } else {
+//         whereClause[Op.and] = [excludedLoanIds];
+//         // }
+
+//         // Fetch interactions
+//         const { count, rows: interactions } = await CustomerInteraction.findAndCountAll({
+//             where: whereClause,
+//             include: [
+//                 {
+//                     model: DueLoanData,
+//                     as: "loan",
+//                     attributes: { exclude: ["createdAt", "updatedAt"] },
+//                     where:{collection_status:"Active"}
+//                 },
+//                 {
+//                     model: ActiveOfficers,
+//                     as: "officer",
+//                     attributes: ["officerId"],
+//                     required: true,
+//                     include: [
+//                         {
+//                             model: UserInformations,
+//                             as: "userInfos",
+//                             attributes: ["userName", "fullName"],
+//                             required: true
+//                         }
+//                     ]
+//                 }
+//             ],
+//             order: [["createdAt", "DESC"]],
+//             limit: parseInt(limit, 10),
+//             offset: parseInt(offset, 10),
+//             raw: true,
+//             nest: true
+//         });
+
+//         if (count === 0) {
+//             return res.status(200).json({
+//                 status: "Error",
+//                 message: "No data found for the specified criteria."
+//             });
+//         }
+
+//         return res.status(200).json({
+//             status: "Success",
+//             message: "Query successful.",
+//             totalRecords: count,
+//             currentPage: parseInt(page, 10),
+//             totalPages: Math.ceil(count / limit),
+//             data: interactions
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching interactions:", error);
+//         res.status(500).json({
+//             status: "Error",
+//             message: "Internal server error"
+//         });
+//     }
+// };
 
 
 
