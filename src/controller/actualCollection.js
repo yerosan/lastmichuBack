@@ -162,14 +162,14 @@ const schema = {
 const validate = ajv.compile(schema);
 
 const addBulkActualCollection = async (req, res) => {
-    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
+    if (!req.file) return res.status(200).json({ status: "error", message: "No file uploaded" });
 
     const filePath = req.file.path;
     try {
         let rows = await parseCSV(filePath);
         if (rows.length === 0) {
             fs.unlinkSync(filePath);
-            return res.status(400).json({ success: false, message: "CSV file is empty" });
+            return res.status(200).json({ status: "error", message: "CSV file is empty" });
         }
 
         // Convert dates to "YYYY-MM-DD"
@@ -184,7 +184,8 @@ const addBulkActualCollection = async (req, res) => {
         const validationErrors = validateBulkData(rows);
         if (validationErrors.length > 0) {
             fs.unlinkSync(filePath);
-            return res.status(400).json({ success: false, message: "Validation failed", errors: validationErrors });
+            console.log("-----------------validetor error")
+            return res.status(200).json({ status: "error", message: "Validation failed", errors: validationErrors });
         }
 
         // Insert into DB
@@ -195,7 +196,7 @@ const addBulkActualCollection = async (req, res) => {
     } catch (error) {
         fs.unlinkSync(filePath);
         console.error("❌ Error in bulk upload:", error);
-        return res.status(500).json({ success: false, message: "Server error during file processing" });
+        return res.status(500).json({ status: "error", message: "Server error during file processing" });
     }
 };
 
@@ -226,21 +227,61 @@ function validateBulkData(data) {
     return errors;
 }
 
+// async function insertIntoDB(rows) {
+//     let insertedCount = 0;
+//     const transaction = await actualCollectionModel.sequelize.transaction();
+
+//     try {
+//         await actualCollectionModel.sync();
+//         await actualCollectionModel.bulkCreate(rows, { transaction });
+//         insertedCount = rows.length;
+
+//         await transaction.commit();
+//         return { status: "Success", message: `✅ Successfully inserted ${insertedCount} records` };
+//     } catch (error) {
+//         await transaction.rollback();
+//         console.error("❌ Transaction failed. Rolling back...", error);
+//         return { status: "error", message: "Upload failed due to database error", error: error.message };
+//     }
+// }
+
+
 async function insertIntoDB(rows) {
-    let insertedCount = 0;
     const transaction = await actualCollectionModel.sequelize.transaction();
 
     try {
         await actualCollectionModel.sync();
-        await actualCollectionModel.bulkCreate(rows, { transaction });
-        insertedCount = rows.length;
 
+        // Step 1: Extract unique collection_date values from input rows
+        const uniqueDates = [...new Set(rows.map(row => row.collection_date))];
+
+        // Step 2: Check if any of these dates already exist in DB
+        const existingDates = await actualCollectionModel.findAll({
+            attributes: ['collection_date'],
+            where: { collection_date: uniqueDates },
+            raw: true
+        });
+
+        if (existingDates.length > 0) {
+            // Step 3: If any date exists, return a message without inserting
+            const foundDates = existingDates.map(d => d.collection_date).join(', ');
+            await transaction.rollback();
+            return { 
+                status: "Error", 
+                message: `⚠️ Data already exists for the following dates: ${foundDates}. Please remove duplicates before uploading.` 
+            };
+        }
+
+        // Step 4: Proceed with bulk insert if no duplicate dates exist
+        await actualCollectionModel.bulkCreate(rows, { transaction });
         await transaction.commit();
-        return { success: true, message: `✅ Successfully inserted ${insertedCount} records` };
+
+        return { status: "Success", message: `✅ Successfully inserted ${rows.length} records.` };
+
     } catch (error) {
         await transaction.rollback();
         console.error("❌ Transaction failed. Rolling back...", error);
-        return { success: false, message: "Upload failed due to database error", error: error.message };
+        return { status: "Error", message: "Upload failed due to database error", error: error.message };
     }
 }
 

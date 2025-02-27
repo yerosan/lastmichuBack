@@ -4,10 +4,10 @@ const updateLoanStatus = async (req, res) => {
     console.log("Updating loan status...");
     try {
         const [results, metadata] = await sequelize.query(`
-            UPDATE due_loan_datas d
+           UPDATE due_loan_datas d
             JOIN actual_collection_data a ON d.loan_id = a.loan_id
             SET d.collection_status = 'Closed'
-            WHERE a.total_collected >= d.outstanding_balance
+            WHERE a.application_status = 'CLOSED'
             AND d.collection_status = 'Active';
         `);
 

@@ -8,5 +8,7 @@ router.post("/getCustomerContact", customerContactController.getInteractionsByDa
 router.post("/customerContactPerUser", customerContactController.getInteractionsByOfficerAndDate)
 router.post("/notContactCustomerPerUser", customerContactController.getNotContactedInteractionsByOfficerAndDate)
 router.put("/updateCustomerInteraction", customerContactController.updateInteraction)
+router.post("/getNotContactedCustomer", customerContactController.getNotContactedInteractions)
+router.post("/getContactedCustomer", customerContactController.getContactedInteractions)
 
 module.exports=router

@@ -308,7 +308,7 @@ const getUserAssignedLoans = async (req, res) => {
 
 const getUserAssignedLoansHistory = async (req, res) => {
   try {
-      const { userId, date, page = 1, limit = 10, officer_id } = req.body;  
+      const { page = 1, limit = 10, officer_id } = req.body;  
 
       const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);  
 
@@ -323,7 +323,7 @@ const getUserAssignedLoansHistory = async (req, res) => {
                   model: DueLoanData,
                   as: "loan",
                   attributes: { exclude: ["createdAt", "updatedAt"] } ,
-                  where:{ collection_status:"Closed"} 
+                  where:{collection_status:"Closed"} 
               },
               {
                   model: ActiveOfficers,

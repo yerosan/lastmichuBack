@@ -11,6 +11,8 @@ const ajv = new Ajv({ allErrors: true, useDefaults: true, coerceTypes: true });
 const upload = multer({ dest: "uploads/" });
 const assignModel=require("../models/index")
 
+const dayjs = require("dayjs");
+
 // Validation schema
 const schema = {
     type: "object",
@@ -59,10 +61,21 @@ const addBulkData = async (req, res) => {
         return res.status(500).json({ success: false, message: "Error reading file" });
     }
 
+
+    // Convert dates to "YYYY-MM-DD"
+    rows = rows.map(row => ({
+        ...row,
+        approved_date: formatDate(row.approved_date),
+        maturity_date: formatDate(row.maturity_date),
+        arrears_start_date: formatDate(row.arrears_start_date),
+    }));
+
     // Validate bulk data
     const validationErrors = validateBulkData(rows);
     if (validationErrors !== "PASS") {
+        console.log("Validation errors:---------------------", validationErrors);
         return res.status(200).json({ message: "Validation failed", errors: validationErrors });
+
     }
 
     // Insert into DB
@@ -86,6 +99,13 @@ function parseCSV(filePath) {
             .on("end", () => resolve(results))
             .on("error", (error) => reject(error));
     });
+}
+
+
+// Convert YYYYMMDD to YYYY-MM-DD
+function formatDate(dateString) {
+    if (!dateString || dateString.length !== 8) return dateString; // Return as is if invalid
+    return dayjs(dateString, "YYYYMMDD").format("YYYY-MM-DD");
 }
 
 function validateBulkData(data) {

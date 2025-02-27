@@ -194,6 +194,7 @@ const activeOfficerRoute = require("./src/route/activatOfficer");
 const assignRoute = require("./src/route/assignLoan");
 const contactecCustomer = require("./src/route/customerInteraction");
 const paymentRoute = require("./src/route/payment");
+const staticsRoute = require("./src/route/statistics");
 
 const Refund = require("./src/models/refundModel");
 const Complain = require("./src/models/reconciliation");
@@ -278,6 +279,7 @@ app.use("/officer", activeOfficerRoute);
 app.use("/assign", assignRoute);
 app.use("/contact", contactecCustomer);
 app.use("/payment", paymentRoute);
+app.use("/statics", staticsRoute)
 
 // 🛑 Global Error Handling Middleware
 app.use((err, req, res, next) => {

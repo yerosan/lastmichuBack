@@ -230,6 +230,76 @@ const getPaymentsByDate = async (req, res) => {
 };
 
 // ✅ Get Payments by Officer and Date
+const gettodaysPaymentsByOfficer = async (req, res) => {  
+    try {
+        const { officer_id, page = 1, limit = 10 , search} = req.body; // Pagination defaults
+        if (!officer_id) {
+            return res.status(200).json({ 
+                status:"Error",
+                message: "Officer ID and Payment Date are required." });
+        }
+
+        const offset = (page - 1) * limit;
+
+        const payment_date = new Date().toISOString().split('T')[0];
+        console.log("------------------Date-=============---------", payment_date)
+
+        const { count, rows: payments } = await Payment.findAndCountAll({
+            where: { payment_date:payment_date,  ...(search && { phone_number: search}),},
+            include: [
+                {
+                    model: DueLoanData,
+                    as: "loan",
+                    // attributes: ["loan_id", "amount", "due_date"]
+                },
+                {
+                    model: ActiveOfficers,
+                    as: "officer",
+                    where: { officerId: officer_id }, // Filter by officer ID
+                    attributes: ["officerId"],
+                    required: true, // Ensures INNER JOIN
+                    include: [
+                        {
+                            model: UserInformations,
+                            as: "userInfos",
+                            attributes: ["userName", "fullName"],
+                            required: true
+                        }
+                    ]
+                }
+            ],
+            order: [["created_at", "DESC"]],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+
+        if (count === 0) {
+            return res.status(200).json({ 
+                status:"Error",
+                message: "No payments found for the specified officer and date." });
+        }
+
+        return res.status(200).json({
+            status:"Success",
+            message: "Success",
+            totalRecords: count,
+            currentPage: page,
+            totalPages: Math.ceil(count / limit),
+            data: payments
+        });
+
+    } catch (error) {
+        console.error("Error fetching payments:", error);
+        res.status(500).json({ 
+            status:"Error",
+            message: "Internal server error" });
+    }
+};
+
+
+
+
+// ✅ Get Payments by Officer and Date
 const getPaymentsByOfficerAndDate = async (req, res) => {  
     try {
         const { officer_id, payment_date, page = 1, limit = 10 , search} = req.body; // Pagination defaults
@@ -296,4 +366,5 @@ const getPaymentsByOfficerAndDate = async (req, res) => {
 };
 
 module.exports = { addPayment, getPaymentsByDate,
-                    getPaymentsByOfficerAndDate, updatePayment };
+                    getPaymentsByOfficerAndDate, updatePayment,
+                    gettodaysPaymentsByOfficer};
