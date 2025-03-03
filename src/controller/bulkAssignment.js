@@ -73,7 +73,6 @@ const addBulkData = async (req, res) => {
     // Validate bulk data
     const validationErrors = validateBulkData(rows);
     if (validationErrors !== "PASS") {
-        console.log("Validation errors:---------------------", validationErrors);
         return res.status(200).json({ message: "Validation failed", errors: validationErrors });
 
     }

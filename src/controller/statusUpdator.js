@@ -1,7 +1,6 @@
 const { sequelize } = require("../models");
 
 const updateLoanStatus = async (req, res) => {
-    console.log("Updating loan status...");
     try {
         const [results, metadata] = await sequelize.query(`
            UPDATE due_loan_datas d

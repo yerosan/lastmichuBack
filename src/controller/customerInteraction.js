@@ -1817,8 +1817,6 @@ const getContactedInteractions = async (req, res) => {
     try {
         const { officer_id, page = 1, limit = 10, search, call_response,date } = req.body;
 
-        console.log("=============Date range -----------", req.body)
-
         // if (!officer_id) {
         //     return res.status(200).json({
         //         status: "Error",
@@ -1925,8 +1923,6 @@ const getContactedInteractions = async (req, res) => {
                 total_paid: collectionMap[interaction.loan?.loan_id] || 0 // Assign 0 if no payments
             }
         }));
-
-        console.log("=============Final Data -Seta----------", finalData.length)
 
         return res.status(200).json({
             status: "Success",

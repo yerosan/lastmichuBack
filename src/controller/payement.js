@@ -242,7 +242,6 @@ const gettodaysPaymentsByOfficer = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const payment_date = new Date().toISOString().split('T')[0];
-        console.log("------------------Date-=============---------", payment_date)
 
         const { count, rows: payments } = await Payment.findAndCountAll({
             where: { payment_date:payment_date,  ...(search && { phone_number: search}),},

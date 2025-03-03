@@ -184,7 +184,6 @@ const addBulkActualCollection = async (req, res) => {
         const validationErrors = validateBulkData(rows);
         if (validationErrors.length > 0) {
             fs.unlinkSync(filePath);
-            console.log("-----------------validetor error")
             return res.status(200).json({ status: "error", message: "Validation failed", errors: validationErrors });
         }
 
