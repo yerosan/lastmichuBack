@@ -209,7 +209,25 @@ app.use(helmet());
 // pm2 start ecosystem.config.js
 
 // 🌍 CORS Setup
-const allowedOrigins = [`${appUrl}`, "http://localhost:3000", "https://your-production-url.com"];
+// const allowedOrigins = [`${appUrl}`, "http://localhost:3000", "https://your-production-url.com"];
+// app.use(
+//     cors({
+//         origin: function (origin, callback) {
+//             if (!origin || allowedOrigins.includes(origin)) {
+//                 callback(null, true);
+//             } else {
+//                 callback(new Error("❌ CORS not allowed for this origin"));
+//             }
+//         },
+//         credentials: true,
+//     })
+// );
+
+
+
+
+// 🌍 CORS Setup with enhanced file upload support
+const allowedOrigins = [`${appUrl}`, "http://localhost:3000", "https://your-production-url.com", "http://10.12.51.20:4050"];
 app.use(
     cors({
         origin: function (origin, callback) {
@@ -219,7 +237,11 @@ app.use(
                 callback(new Error("❌ CORS not allowed for this origin"));
             }
         },
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+        exposedHeaders: ["Content-Disposition"], // Important for file downloads
         credentials: true,
+        maxAge: 86400 // Cache preflight requests for 24 hours
     })
 );
 

@@ -44,7 +44,7 @@ const LoanModel = sequelize.define("due_loan_datas", {
         }
     },
     product_type: {
-        type: DataTypes.ENUM("Michu 1.0", "Michu Kiyya - Formal", "Michu Wabii"),
+        type: DataTypes.ENUM("Michu 1.0", "Michu Kiyya - Formal", "Michu Wabii","Michu-Kiyya Informal"),
         allowNull: false
     },
     approved_date: {

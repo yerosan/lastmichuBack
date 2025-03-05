@@ -162,14 +162,14 @@ const schema = {
 const validate = ajv.compile(schema);
 
 const addBulkActualCollection = async (req, res) => {
-    if (!req.file) return res.status(200).json({ status: "error", message: "No file uploaded" });
+    if (!req.file) return res.status(200).json({ status: "error", message: "No file uploaded" , errors:null});
 
     const filePath = req.file.path;
     try {
         let rows = await parseCSV(filePath);
         if (rows.length === 0) {
             fs.unlinkSync(filePath);
-            return res.status(200).json({ status: "error", message: "CSV file is empty" });
+            return res.status(200).json({ status: "error", message: "CSV file is empty", errors:null });
         }
 
         // Convert dates to "YYYY-MM-DD"
@@ -181,11 +181,24 @@ const addBulkActualCollection = async (req, res) => {
         }));
 
         // Validate bulk data
+        // const validationErrors = validateBulkData(rows);
+        // if (validationErrors.length > 0) {
+        //     fs.unlinkSync(filePath);
+        //     return res.status(200).json({ status: "error", message: "Validation failed", errors: validationErrors });
+        // }
+
+
         const validationErrors = validateBulkData(rows);
-        if (validationErrors.length > 0) {
+        if (validationErrors !== "PASS") {
+            console.log("==============-----------------------===============Errors", validationErrors)
             fs.unlinkSync(filePath);
-            return res.status(200).json({ status: "error", message: "Validation failed", errors: validationErrors });
+            return res.status(200).json({ 
+                status: "error", 
+                message: validationErrors.message, 
+                errors: validationErrors.errorDetails 
+            });
         }
+        
 
         // Insert into DB
         const result = await insertIntoDB(rows);
@@ -195,7 +208,7 @@ const addBulkActualCollection = async (req, res) => {
     } catch (error) {
         fs.unlinkSync(filePath);
         console.error("❌ Error in bulk upload:", error);
-        return res.status(500).json({ status: "error", message: "Server error during file processing" });
+        return res.status(500).json({ status: "error", message: "Server error during file processing" , errors:null});
     }
 };
 
@@ -216,15 +229,88 @@ function formatDate(dateString) {
     return dayjs(dateString, "YYYYMMDD").format("YYYY-MM-DD");
 }
 
+// function validateBulkData(data) {
+//     const errors = [];
+//     data.forEach((row, index) => {
+//         if (!validate(row)) {
+//             errors.push({ row: index + 1, errors: validate.errors });
+//         }
+//     });
+//     return errors;
+// }
+
+
+// function validateBulkData(data) {
+//     const errors = [];
+//     const errorSummary = {};
+
+//     data.forEach((row, index) => {
+//         const valid = validate(row);
+//         if (!valid) {
+//             validate.errors.forEach((err) => {
+//                 const field = err.instancePath.replace("/", ""); // Extract field name
+//                 const message = `${field} ${err.message}`;
+
+//                 if (!errorSummary[field]) {
+//                     errorSummary[field] = { message, count: 0, examples: [] };
+//                 }
+//                 errorSummary[field].count += 1;
+                
+//                 // Store only first 3 examples per error type
+//                 if (errorSummary[field].examples.length < 3) {
+//                     errorSummary[field].examples.push({ row: index + 1, value: row[field] });
+//                 }
+//             });
+//         }
+//     });
+
+//     if (Object.keys(errorSummary).length === 0) {
+//         return "PASS";
+//     }
+
+//     return {
+//         message: "Validation failed. Please fix the following errors.",
+//         errorDetails: errorSummary
+//     };
+// }
+
+
+
+
+
 function validateBulkData(data) {
-    const errors = [];
+    const errorSummary = {};
+
     data.forEach((row, index) => {
-        if (!validate(row)) {
-            errors.push({ row: index + 1, errors: validate.errors });
+        const valid = validate(row);
+        if (!valid) {
+            validate.errors.forEach((err) => {
+                const field = err.instancePath.replace("/", ""); // Extract field name
+                const message = `${field} ${err.message}`;
+
+                if (!errorSummary[field]) {
+                    errorSummary[field] = { message, count: 0, examples: [] };
+                }
+                errorSummary[field].count += 1;
+                
+                // Store only first 3 examples per error type
+                if (errorSummary[field].examples.length < 3) {
+                    errorSummary[field].examples.push({ row: index + 1, value: row[field] });
+                }
+            });
         }
     });
-    return errors;
+
+    if (Object.keys(errorSummary).length === 0) {
+        return "PASS";
+    }
+
+    return {
+        message: "Validation failed. Please fix the following errors.",
+        errorDetails: errorSummary
+    };
 }
+
 
 // async function insertIntoDB(rows) {
 //     let insertedCount = 0;
@@ -263,24 +349,25 @@ async function insertIntoDB(rows) {
 
         if (existingDates.length > 0) {
             // Step 3: If any date exists, return a message without inserting
-            const foundDates = existingDates.map(d => d.collection_date).join(', ');
+            // const foundDates = existingDates.map(d => d.collection_date).join(', ');
             await transaction.rollback();
             return { 
-                status: "Error", 
-                message: `⚠️ Data already exists for the following dates: ${foundDates}. Please remove duplicates before uploading.` 
+                status: "error", 
+                message: `⚠️ Data already exists for the given dates: . Please remove duplicates before uploading.`, 
+                errors:null
             };
         }
 
         // Step 4: Proceed with bulk insert if no duplicate dates exist
         await actualCollectionModel.bulkCreate(rows, { transaction });
         await transaction.commit();
-
-        return { status: "Success", message: `✅ Successfully inserted ${rows.length} records.` };
+        
+        return { status: "Success", message: `✅ Successfully inserted ${rows.length} records.`, errors:null};
 
     } catch (error) {
         await transaction.rollback();
         console.error("❌ Transaction failed. Rolling back...", error);
-        return { status: "Error", message: "Upload failed due to database error", error: error.message };
+        return { status: "Error", message: "Upload failed due to database error", error: error.message, errors:null };
     }
 }
 

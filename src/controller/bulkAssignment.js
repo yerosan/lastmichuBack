@@ -12,6 +12,7 @@ const upload = multer({ dest: "uploads/" });
 const assignModel=require("../models/index")
 
 const dayjs = require("dayjs");
+const { error } = require("console");
 
 // Validation schema
 const schema = {
@@ -27,7 +28,7 @@ const schema = {
         product_type: 
         { type: "string",
              enum: ["Michu 1.0", "Michu Wabii",
-                 "Michu Kiyya - Formal",] },
+                 "Michu Kiyya - Formal","Michu-Kiyya Informal"] },
         approved_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$"},
         maturity_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$"},
         outstanding_balance: { type: "number", minimum: 0 },
@@ -47,18 +48,18 @@ const validate = ajv.compile(schema);
 const addBulkData = async (req, res) => {
   const today = new Date().toISOString().split('T')[0];  // Formats as YYYY-MM-DD
   const uploaded_date=today
-    if (!req.file) return res.status(200).json({ message: "No file uploaded" });
+    if (!req.file) return res.status(200).json({status:"error",message: "No file uploaded", error:null });
 
     const filePath = req.file.path;
     let rows = [];
     try {
         rows = await parseCSV(filePath);
         if (rows.length === 0) {
-            return res.status(200).json({ message: "CSV file is empty" });
+            return res.status(200).json({status:"error", message: "CSV file is empty", error:null });
         }
     } catch (error) {
         console.error("❌ Error parsing CSV:", error);
-        return res.status(500).json({ success: false, message: "Error reading file" });
+        return res.status(500).json({ status: "error", message: "Error reading file", errors:null });
     }
 
 
@@ -71,11 +72,15 @@ const addBulkData = async (req, res) => {
     }));
 
     // Validate bulk data
-    const validationErrors = validateBulkData(rows);
-    if (validationErrors !== "PASS") {
-        return res.status(200).json({ message: "Validation failed", errors: validationErrors });
 
-    }
+    const validationErrors = validateBulkData(rows);
+        if (validationErrors !== "PASS") {
+            return res.status(200).json({status:"error",message:"Validation failed",errors:validationErrors,});
+        }
+    // if (validationErrors !== "PASS") {
+    //     return res.status(200).json({status:"error", message: "Validation failed", errors: validationErrors });
+
+    // }
 
     // Insert into DB
     const result = await insertIntoDB(rows, uploaded_date);
@@ -83,9 +88,9 @@ const addBulkData = async (req, res) => {
 
 
     if (result.success) {
-        return res.status(200).json({ message:`✅ Successfully inserted ${result.insertedCount} records`, data: { insertedCount: result.insertedCount,failedRows: Array.from(result.failedRows)}});
+        return res.status(200).json({status:"success", message:`✅ Successfully inserted ${result.insertedCount} records`, data: { insertedCount: result.insertedCount,failedRows: Array.from(result.failedRows)}});
     } else {
-        return res.status(200).json({ message: result.message, data: { insertedCount: result.insertedCount,failedRows: Array.from(result.failedRows)}});
+        return res.status(200).json({status:"error", message: result.message,error:null, data: { insertedCount: result.insertedCount,failedRows: Array.from(result.failedRows)}});
     }
 };
 
@@ -107,15 +112,51 @@ function formatDate(dateString) {
     return dayjs(dateString, "YYYYMMDD").format("YYYY-MM-DD");
 }
 
+// function validateBulkData(data) {
+//     const errors = [];
+//     data.forEach((row, index) => {
+//         const valid = validate(row);
+//         if (!valid) {
+//             errors.push({ index, errors: validate.errors });
+//         }
+//     });
+//     return errors.length === 0 ? "PASS" : errors;
+// }
+
+
+
 function validateBulkData(data) {
     const errors = [];
+    const errorSummary = {};
+
     data.forEach((row, index) => {
         const valid = validate(row);
         if (!valid) {
-            errors.push({ index, errors: validate.errors });
+            validate.errors.forEach((err) => {
+                const field = err.instancePath.replace("/", ""); // Extract field name
+                const message = `${field} ${err.message}`;
+
+                if (!errorSummary[field]) {
+                    errorSummary[field] = { message, count: 0, examples: [] };
+                }
+                errorSummary[field].count += 1;
+                
+                // Store only first 3 examples per error type
+                if (errorSummary[field].examples.length < 3) {
+                    errorSummary[field].examples.push({ row: index + 1, value: row[field] });
+                }
+            });
         }
     });
-    return errors.length === 0 ? "PASS" : errors;
+
+    if (Object.keys(errorSummary).length === 0) {
+        return "PASS";
+    }
+
+    return {
+        message: "Validation failed. Please fix the following errors.",
+        errorDetails: errorSummary
+    };
 }
 
 
