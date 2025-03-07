@@ -24,6 +24,8 @@ AssignedLoans.belongsTo(ActiveOfficers, { foreignKey: "officer_id", targetKey: "
 ActiveOfficers.belongsTo(UserInformations, { foreignKey: "officerId" ,targetKey: "userId",as:"userInfos", onDelete:"CASCADE" });
 
 PTPModel.belongsTo(CustomerInteraction, { foreignKey: "ptp_id" ,targetKey: "interaction_id",as:"contectCustomer", onDelete:"CASCADE" });
+PTPModel.belongsTo(DueLoanData, { foreignKey: "loan_id", targetKey: "loan_id", as:"loan", onDelete:"CASCADE" });
+PTPModel.belongsTo(ActiveOfficers, { foreignKey: "officer_id", targetKey: "officerId", as:"officer", onDelete:"CASCADE" });
 ECRModel.belongsTo(CustomerInteraction, { foreignKey: "ecr_id" ,targetKey: "interaction_id",as:"contectCustomer", onDelete:"CASCADE" });
 
 // Export all models from a single entry point

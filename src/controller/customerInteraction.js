@@ -1816,6 +1816,11 @@ const getContactedInteractionsByOfficer = async (req, res) => {
 const getContactedInteractions = async (req, res) => {
     try {
         const { officer_id, page = 1, limit = 10, search, call_response,date } = req.body;
+        console.log("===========-----------============----------==========",req.body)
+        // Or use more specific logging levels
+        console.info('Info message');
+        console.error('Error message');
+        console.warn('Warning message');
 
         // if (!officer_id) {
         //     return res.status(200).json({
@@ -1943,11 +1948,164 @@ const getContactedInteractions = async (req, res) => {
 };
 
 
-// You might want to export both controllers
-// module.exports = {
-//     getContactedInteractionsByOfficer,
-//     getNotContactedInteractionsByOfficer // from previous example
-// };
+
+
+// const promiseTopay= async(req, res)=>{
+//     const data=req.body
+
+//     console.log("The data interaction set ============----------------", data)
+
+//     if(!data.officer_id){
+//         res.status(200).json({
+//             status:"error",
+//             message:"Officer id is required"
+//         })
+//     }else{
+//         try {
+//             const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+//             console.log("The data interaction set ============----from off set------------", data)
+//             const { count, rows } = await PTPModel.findAndCountAll({
+//                 where: {
+//                     officer_id: data.officer_id,
+//                     ...(data.search && { phone_number: data.search }),
+//                 },
+//                 include: [
+//                     {
+//                         model: DueLoanData,
+//                         as: "loan",
+//                         attributes: { exclude: ["createdAt", "updatedAt"] },
+//                         where: { collection_status: "Active" }
+//                     },
+//                     {
+//                         model: ActiveOfficers,
+//                         as: "officer",
+//                         attributes: ["officerId"],
+//                         required: true,
+//                         include: [
+//                             {
+//                                 model: UserInformations,
+//                                 as: "userInfos",
+//                                 attributes: ["userName", "fullName"],
+//                                 required: true
+//                             }
+//                         ]
+//                     }
+//                 ],
+//                 order: [["createdAt", "DESC"]],
+//                 limit: parseInt(data.limit, 10),
+//                 offset: parseInt(offset, 10),
+//                 raw: true,
+//                 nest: true
+//             });
+    
+//             if (count > 0) {
+//                 res.status(200).json({
+//                     status: "Success",
+//                     message: "Success",
+//                     totalRecords: count,
+//                     data: rows
+//                 });
+//             } else {
+//                 res.status(200).json({
+//                     status: "error",
+//                     message: "No data found for the specified criteria."
+//                 });
+//             }
+//         } catch (error) {
+//             console.log("Error fetching interactions:", error);
+//             res.status(500).json({
+//                 status: "error",
+//                 message: "Internal server error"
+//             });
+//         }
+//     }
+// }
+
+
+
+
+
+
+const promiseTopay = async (req, res) => {
+    const data = req.body;
+    const { page = 1, limit = 10,date } = data; // Default values added
+
+    if (!data.officer_id) {
+        return res.status(200).json({
+            status: "error",
+            message: "Officer id is required"
+        });
+    }
+
+    try {
+        if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
+            return res.status(200).json({
+                status: "error",
+                message: "Invalid page or limit parameters"
+            });
+        }
+
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        
+        const { count, rows } = await PTPModel.findAndCountAll({
+            where: {
+                officer_id: data.officer_id,
+                ...(data.search && { phone_number: data.search }),
+                ...(date.startDate && date.endDate && {ptp_date:{[Op.between]:[date.startDate, date.endDate]}})
+            },
+            include: [
+                {
+                    model: DueLoanData,
+                    as: "loan",
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
+                    where: { collection_status: "Active" }
+                },
+                {
+                    model: ActiveOfficers,
+                    as: "officer",
+                    attributes: ["officerId"],
+                    required: true,
+                    include: [
+                        {
+                            model: UserInformations,
+                            as: "userInfos",
+                            attributes: ["userName", "fullName"],
+                            required: true
+                        }
+                    ]
+                }
+            ],
+            order: [["createdAt", "DESC"]],
+            limit: parseInt(limit, 10),
+            offset,
+            raw: true,
+            nest: true
+        });
+
+        if (count > 0) {
+            return res.status(200).json({
+                status: "success",
+                message: "Success",
+                totalRecords: count,
+                data: rows
+            });
+        }
+
+        return res.status(200).json({
+            status: "error",
+            message: "No data found for the specified criteria."
+        });
+
+    } catch (error) {
+        console.log("error fetching interactions:", error);
+        // throw ("Test error", error)
+        return res.status(500).json({
+            status: "error from the ceatch",
+            message: "Internal server error"
+        });
+    }
+};
+
 
 
 
@@ -1956,4 +2114,5 @@ module.exports = { addInteraction, getInteractionsByDate ,
                    getNotContactedInteractionsByOfficerAndDate,
                    getNotContactedInteractions,
                    getContactedInteractions,
+                   promiseTopay,
                 };

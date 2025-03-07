@@ -10,5 +10,6 @@ router.post("/notContactCustomerPerUser", customerContactController.getNotContac
 router.put("/updateCustomerInteraction", customerContactController.updateInteraction)
 router.post("/getNotContactedCustomer", customerContactController.getNotContactedInteractions)
 router.post("/getContactedCustomer", customerContactController.getContactedInteractions)
+router.post("/promisedCustomer", customerContactController.promiseTopay)
 
 module.exports=router
