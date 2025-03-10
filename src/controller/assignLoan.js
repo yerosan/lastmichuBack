@@ -240,20 +240,59 @@ const getUserAssignedLoans = async (req, res) => {
             loanFilter.product_type = product_type;  
         }
 
+        // const { count, rows } = await AssignedLoans.findAndCountAll({
+        //     where: {
+        //         assigned_date: { [Op.between]: [date.startDate, date.endDate] },
+        //         officer_id: officer_id,
+        //         [Op.and]: [excludedLoanIds],
+        //         ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
+        //     },
+        //     include: [
+        //         {
+        //             model: DueLoanData,
+        //             as: "loan",
+        //             attributes: { exclude: ["createdAt", "updatedAt"] },  
+        //             where: loanFilter  // Filtering by product_type if provided
+                    
+        //         },
+        //         {
+        //             model: ActiveOfficers,
+        //             as: "officer",
+        //             attributes: ["officerId"],
+        //             required: true,  
+        //             include: [
+        //                 {
+        //                     model: UserInformations,
+        //                     as: "userInfos",
+        //                     attributes: ["userName", "fullName"],  
+        //                     required: true
+        //                 }
+        //             ]
+        //         }
+        //     ],
+        //     attributes: ["assigned_id", "customer_phone", "assigned_date"],
+        //     order: [[Sequelize.col("loan.outstanding_balance"), "DESC"]],
+        //     order: [["createdAt", "DESC"]],
+        //     limit: parseInt(limit, 10),  
+        //     offset: parseInt(offset, 10),  
+        //     raw: true,  
+        //     nest: true  
+        // });
+
+
         const { count, rows } = await AssignedLoans.findAndCountAll({
             where: {
-                assigned_date: { [Op.between]: [date.startDate, date.endDate] },
+                ...(date.startDate && date.endDate && {assigned_date: { [Op.between]: [date.startDate, date.endDate] }}),
                 officer_id: officer_id,
                 [Op.and]: [excludedLoanIds],
-                ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
+                ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  
             },
             include: [
                 {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },  
-                    where: loanFilter  // Filtering by product_type if provided
-                    
+                    where: loanFilter  
                 },
                 {
                     model: ActiveOfficers,
@@ -271,12 +310,15 @@ const getUserAssignedLoans = async (req, res) => {
                 }
             ],
             attributes: ["assigned_id", "customer_phone", "assigned_date"],
-            order: [[Sequelize.col("loan.outstanding_balance"), "DESC"]],
+            order: [
+                ["assigned_date", "DESC"], // 1st priority: Sort by date (most recent first)
+                [Sequelize.col("loan.outstanding_balance"), "DESC"] // 2nd priority: If same date, sort by amount
+            ],
             limit: parseInt(limit, 10),  
             offset: parseInt(offset, 10),  
             raw: true,  
             nest: true  
-        });
+        });        
 
         if (count > 0) {
             res.status(200).json({

@@ -23,11 +23,13 @@ const Promise_to_pay = sequelize.define("promise_to_pays", {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    // status: {
-    //     type: DataTypes.ENUM("active", "inactive"),
-    //     allowNull: false,
-    //     defaultValue: "active"
-    // },
+
+    status:{
+        type: DataTypes.ENUM("notable", "noted"),
+        allowNull: false,
+        defaultValue: "notable"
+    },
+
     ptp_date: {
         type: DataTypes.DATEONLY,  // ✅ Stores only YYYY-MM-DD format
         allowNull: false,

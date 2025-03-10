@@ -77,10 +77,6 @@ const addBulkData = async (req, res) => {
         if (validationErrors !== "PASS") {
             return res.status(200).json({status:"error",message:"Validation failed",errors:validationErrors,});
         }
-    // if (validationErrors !== "PASS") {
-    //     return res.status(200).json({status:"error", message: "Validation failed", errors: validationErrors });
-
-    // }
 
     // Insert into DB
     const result = await insertIntoDB(rows, uploaded_date);
@@ -111,17 +107,6 @@ function formatDate(dateString) {
     if (!dateString || dateString.length !== 8) return dateString; // Return as is if invalid
     return dayjs(dateString, "YYYYMMDD").format("YYYY-MM-DD");
 }
-
-// function validateBulkData(data) {
-//     const errors = [];
-//     data.forEach((row, index) => {
-//         const valid = validate(row);
-//         if (!valid) {
-//             errors.push({ index, errors: validate.errors });
-//         }
-//     });
-//     return errors.length === 0 ? "PASS" : errors;
-// }
 
 
 

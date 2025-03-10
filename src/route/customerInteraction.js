@@ -11,5 +11,6 @@ router.put("/updateCustomerInteraction", customerContactController.updateInterac
 router.post("/getNotContactedCustomer", customerContactController.getNotContactedInteractions)
 router.post("/getContactedCustomer", customerContactController.getContactedInteractions)
 router.post("/promisedCustomer", customerContactController.promiseTopay)
+router.post("/ptp_update", customerContactController.PTPInteraction)
 
 module.exports=router

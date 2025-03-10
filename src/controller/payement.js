@@ -300,9 +300,10 @@ const gettodaysPaymentsByOfficer = async (req, res) => {
 
 // ✅ Get Payments by Officer and Date
 const getPaymentsByOfficerAndDate = async (req, res) => {  
+
     try {
         const { officer_id, payment_date, page = 1, limit = 10 , search} = req.body; // Pagination defaults
-        if (!officer_id || !payment_date) {
+        if (!officer_id) {
             return res.status(200).json({ 
                 status:"Error",
                 message: "Officer ID and Payment Date are required." });
@@ -311,9 +312,10 @@ const getPaymentsByOfficerAndDate = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const { count, rows: payments } = await Payment.findAndCountAll({
-            where: { payment_date:{[Op.between]:[payment_date.startDate, payment_date.endDate]
+            where: { ...(payment_date.startDate && payment_date.endDate && {payment_date:{[Op.between]:[payment_date.startDate, payment_date.endDate]
               
-             },  ...(search && { phone_number: search}),},
+                    }}),  
+               ...(search && { phone_number: search})},
             include: [
                 {
                     model: DueLoanData,
