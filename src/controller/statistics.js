@@ -679,483 +679,13 @@ async function getCollectionStatistics(req, res) {
 
 
 
-// const { QueryTypes, Op} = require('sequelize');
-
-// const e = require("express");
-// const CustomerInteraction = require("../models/customerInteraction");
-// const ActualCollectionModel=require("../models/actualCollecttion")
-
-
-// const { Sequelize, where } = require("sequelize");
-// const CollectionModel = require("../models/collectionModel");
-// const sequelize = require("../db/db"); // Import your Sequelize instance
-// const { stat } = require("fs");
-
-
-
 async function getCollectionStatisticsPerUser(req, res) {
     // console.log("===========-------------========", req.body)
     try {
 
-        // const getSummaryStats = async (startDate = null, endDate = null) => {
-        //     // Build the date range condition
-        //     const dateCondition = startDate && endDate 
-        //         ? 'AND ci.date BETWEEN :startDate AND :endDate' 
-        //         : '';
-
-        //     const collectiondateCondition = startDate && endDate 
-        //         ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
-        //         : '';
-
-
-        //     const summaryStats = await sequelize.query(`
-        //         WITH MaxDateInfo AS (
-        //             -- Get the maximum collection date from actual_collection_data
-        //             SELECT 
-        //                 MAX(acd.collection_date) AS max_date,
-        //                 DATE(MAX(acd.collection_date)) AS max_date_only
-        //             FROM actual_collection_data acd
-        //         ),
-        //         DueLoans AS (
-        //             -- Select only loans that exist in due_loan_datas
-        //             SELECT DISTINCT loan_id FROM due_loan_datas
-        //         ),
-        //         ClosedLoans AS (
-        //             -- Get loans that are marked as "Closed" and exist in due_loan_datas
-        //             -- Only for the max date
-        //             SELECT DISTINCT acd.loan_id
-        //             FROM actual_collection_data acd
-        //             JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //             JOIN MaxDateInfo mdi ON DATE(acd.collection_date) = mdi.max_date_only
-        //             WHERE acd.application_status = 'Closed'
-        //         ),
-        //         ClosedLoanSummary AS (
-        //             -- Sum collected amounts for Closed Loans on the max date
-        //             SELECT 
-        //                 COALESCE(SUM(acd.total_collected), 0) AS closed_total_collected,
-        //                 COALESCE(SUM(acd.penalty_collected), 0) AS closed_penalty_collected,
-        //                 COALESCE(SUM(acd.principal_collected), 0) AS closed_principal_collected,
-        //                 COALESCE(SUM(acd.interest_collected), 0) AS closed_interest_collected
-        //             FROM actual_collection_data acd
-        //             JOIN ClosedLoans cl ON acd.loan_id = cl.loan_id
-        //             JOIN MaxDateInfo mdi ON DATE(acd.collection_date) = mdi.max_date_only
-        //         ),
-        //         ActiveLoanSummary AS (
-        //             -- Sum collected amounts for Active Loans (excluding Closed Loans) on the max date
-        //             SELECT 
-        //                 COALESCE(SUM(acd.total_collected), 0) AS active_total_collected,
-        //                 COALESCE(SUM(acd.penalty_collected), 0) AS active_penalty_collected,
-        //                 COALESCE(SUM(acd.principal_collected), 0) AS active_principal_collected,
-        //                 COALESCE(SUM(acd.interest_collected), 0) AS active_interest_collected
-        //             FROM actual_collection_data acd
-        //             JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //             JOIN MaxDateInfo mdi ON DATE(acd.collection_date) = mdi.max_date_only
-        //             WHERE acd.loan_id NOT IN (SELECT loan_id FROM ClosedLoans)
-        //         ),
-        //         OverallSummary AS (
-        //             -- Sum collected amounts for ALL loans in due_loan_datas on the max date
-        //             SELECT 
-        //                 COALESCE(SUM(acd.total_collected), 0) AS overall_total_collected,
-        //                 COALESCE(SUM(acd.penalty_collected), 0) AS overall_penalty_collected,
-        //                 COALESCE(SUM(acd.principal_collected), 0) AS overall_principal_collected,
-        //                 COALESCE(SUM(acd.interest_collected), 0) AS overall_interest_collected
-        //             FROM actual_collection_data acd
-        //             JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //             JOIN MaxDateInfo mdi ON DATE(acd.collection_date) = mdi.max_date_only
-        //         )
-        //         SELECT 
-        //             cs.closed_total_collected,
-        //             cs.closed_penalty_collected,
-        //             cs.closed_principal_collected,
-        //             cs.closed_interest_collected,
-        //             asum.active_total_collected,
-        //             asum.active_penalty_collected,
-        //             asum.active_principal_collected,
-        //             asum.active_interest_collected,
-        //             os.overall_total_collected,
-        //             os.overall_penalty_collected,
-        //             os.overall_principal_collected,
-        //             os.overall_interest_collected,
-        //             (SELECT max_date_only FROM MaxDateInfo) AS collection_date
-        //         FROM ClosedLoanSummary cs
-        //         CROSS JOIN ActiveLoanSummary asum
-        //         CROSS JOIN OverallSummary os`,
-        //         {
-        //             type: QueryTypes.SELECT
-        //         }
-        //     );
-
-        //     function getLastWeekDateRange() {
-        //       const currentDate = new Date();
-              
-        //       let date = new Date(currentDate);
-              
-        //       let day = date.getDay();
-              
-        //       let daysToSubtract = day === 0 ? 6 : day + 6;
-              
-        //       // Set date to previous week's Monday
-        //       date.setDate(date.getDate() - daysToSubtract);
-        //       let previousMondayDate = new Date(date);
-        //       let lastWeekEnd = new Date(date);
-        //       lastWeekEnd.setDate(date.getDate() + 6);
-              
-        //       return {
-        //         startDate: previousMondayDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-        //         endDate: lastWeekEnd.toISOString().split('T')[0]           // Format: YYYY-MM-DD
-        //       };
-        //     }
-            
-        //     // Example of using this with your SQL query
-        //     async function getWeeklyStatistics() {
-        //       // Get last week's date range
-        //       const { startDate, endDate } = getLastWeekDateRange();
-              
-        //       // Use the date range in your SQL query
-        //       const WeeklyStatistics = await sequelize.query(`
-        //         WITH DateRange AS (
-        //           -- Use last week's date range
-        //           SELECT 
-        //               :startDate AS start_date,
-        //               :endDate AS end_date
-        //         ),
-        //         DueLoans AS (
-        //           -- Select only loans that exist in due_loan_datas
-        //           SELECT DISTINCT loan_id FROM due_loan_datas
-        //         ),
-        //         ClosedLoans AS (
-        //           -- Get loans that are marked as "Closed" and exist in due_loan_datas
-        //           -- Within the date range
-        //           SELECT DISTINCT acd.loan_id
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //           WHERE acd.application_status = 'Closed'
-        //         ),
-        //         -- Rest of your query remains the same...
-        //         ClosedLoanSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS closed_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS closed_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS closed_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS closed_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN ClosedLoans cl ON acd.loan_id = cl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //         ),
-        //         ActiveLoanSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS active_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS active_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS active_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS active_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //           WHERE acd.loan_id NOT IN (SELECT loan_id FROM ClosedLoans)
-        //         ),
-        //         OverallSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS overall_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS overall_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS overall_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS overall_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //         )
-        //         SELECT 
-        //           cs.closed_total_collected,
-        //           cs.closed_penalty_collected,
-        //           cs.closed_principal_collected,
-        //           cs.closed_interest_collected,
-        //           asum.active_total_collected,
-        //           asum.active_penalty_collected,
-        //           asum.active_principal_collected,
-        //           asum.active_interest_collected,
-        //           os.overall_total_collected,
-        //           os.overall_penalty_collected,
-        //           os.overall_principal_collected,
-        //           os.overall_interest_collected,
-        //           :startDate AS start_date,
-        //           :endDate AS end_date
-        //         FROM ClosedLoanSummary cs
-        //         CROSS JOIN ActiveLoanSummary asum
-        //         CROSS JOIN OverallSummary os`,
-        //         {
-        //           replacements: {
-        //             startDate: startDate,
-        //             endDate: endDate
-        //           },
-        //           type: QueryTypes.SELECT
-        //         }
-        //       );
-              
-        //       return WeeklyStatistics;
-        //     }
-
-
-
-        //     const generalStats = await sequelize.query(`
-        //         SELECT 
-        //             -- Total calls (total table content)
-        //             COUNT(*) as total_calls,
-                    
-        //             -- Call status statistics
-        //             COUNT(CASE WHEN call_status = 'Contacted' THEN 1 END) as total_contacted_calls,
-        //             COUNT(CASE WHEN call_status = 'Not contacted' THEN 1 END) as total_not_contacted_calls,
-                    
-        //             -- Unique customers statistics
-        //             COUNT(DISTINCT loan_id) as total_unique_customers,
-        //             COUNT(DISTINCT CASE WHEN call_status = 'Contacted' THEN loan_id END) as unique_contacted_customers,
-                    
-        //             -- Modified: Only count loan_ids that have NEVER been contacted
-        //             (SELECT COUNT(DISTINCT ci1.loan_id) 
-        //              FROM customer_interactions ci1 
-        //              WHERE NOT EXISTS (
-        //                  SELECT 1 FROM customer_interactions ci2 
-        //                  WHERE ci2.loan_id = ci1.loan_id 
-        //                  AND ci2.call_status = 'Contacted'
-        //                  ${startDate && endDate ? 'AND ci2.date BETWEEN :startDate AND :endDate' : ''}
-        //              )
-        //              ${startDate && endDate ? 'AND ci1.date BETWEEN :startDate AND :endDate' : ''}
-        //             ) as unique_not_contacted_customers,
-                    
-        //             -- Payment statistics - overall
-        //             (SELECT COUNT(DISTINCT ac.loan_id) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci.loan_id 
-        //                 FROM customer_interactions ci 
-        //                 WHERE 1=1 ${startDate && endDate ? 'AND ci.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as total_customers_paid,
-                    
-        //             -- Total amount paid - overall
-        //             (SELECT SUM(ac.total_collected) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci.loan_id 
-        //                 FROM customer_interactions ci 
-        //                 WHERE 1=1 ${startDate && endDate ? 'AND ci.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as total_amount_paid,
-                    
-        //             -- Payment statistics - for contacted customers
-        //             (SELECT COUNT(DISTINCT ac.loan_id) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci.loan_id 
-        //                 FROM customer_interactions ci 
-        //                 WHERE ci.call_status = 'Contacted' 
-        //                 ${startDate && endDate ? 'AND ci.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as contacted_customers_paid,
-                    
-        //             -- Total amount paid - for contacted customers
-        //             (SELECT SUM(ac.total_collected) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci.loan_id 
-        //                 FROM customer_interactions ci 
-        //                 WHERE ci.call_status = 'Contacted' 
-        //                 ${startDate && endDate ? 'AND ci.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as contacted_amount_paid,
-                    
-        //             -- Modified: Payment statistics - for truly not contacted customers
-        //             (SELECT COUNT(DISTINCT ac.loan_id) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci1.loan_id 
-        //                 FROM customer_interactions ci1
-        //                 WHERE NOT EXISTS (
-        //                     SELECT 1 FROM customer_interactions ci2 
-        //                     WHERE ci2.loan_id = ci1.loan_id 
-        //                     AND ci2.call_status = 'Contacted'
-        //                     ${startDate && endDate ? 'AND ci2.date BETWEEN :startDate AND :endDate' : ''}
-        //                 )
-        //                 ${startDate && endDate ? 'AND ci1.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as not_contacted_customers_paid,
-                    
-        //             -- Modified: Total amount paid - for truly not contacted customers
-        //             (SELECT SUM(ac.total_collected) 
-        //             FROM actual_collection_data ac 
-        //             WHERE ac.loan_id IN (
-        //                 SELECT DISTINCT ci1.loan_id 
-        //                 FROM customer_interactions ci1
-        //                 WHERE NOT EXISTS (
-        //                     SELECT 1 FROM customer_interactions ci2 
-        //                     WHERE ci2.loan_id = ci1.loan_id 
-        //                     AND ci2.call_status = 'Contacted'
-        //                     ${startDate && endDate ? 'AND ci2.date BETWEEN :startDate AND :endDate' : ''}
-        //                 )
-        //                 ${startDate && endDate ? 'AND ci1.date BETWEEN :startDate AND :endDate' : ''}
-        //             )) as not_contacted_amount_paid
-        //         FROM customer_interactions ci
-        //         WHERE 1=1 ${startDate && endDate ? 'AND ci.date BETWEEN :startDate AND :endDate' : ''}
-        //     `, {
-        //         replacements: {
-        //             startDate,
-        //             endDate
-        //         },
-        //         type: QueryTypes.SELECT
-        //     });            
-
-        //     function getLastMonthDateRange() {
-        //         // Get current date
-        //         const currentDate = new Date();
-                
-        //         // Get current month and year
-        //         const currentMonth = currentDate.getMonth(); // 0-11 (Jan-Dec)
-        //         const currentYear = currentDate.getFullYear();
-        //         const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        //         const previousMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-                
-        //         // First day of previous month: set to 1st day of the previous month
-        //         const firstDayPreviousMonth = new Date(previousMonthYear, previousMonth, 1);
-        //         const lastDayPreviousMonth = new Date(currentYear, currentMonth, 0);
-                
-        //         // Format dates as YYYY-MM-DD strings
-        //         const startDate = firstDayPreviousMonth.toISOString().split('T')[0];
-        //         const endDate = lastDayPreviousMonth.toISOString().split('T')[0];
-        //         return { startDate, endDate };
-        //       }
-        //     // Example of using this with your SQL query
-        //     async function getMonthlyStatistics() {
-        //       // Get last month's date range
-        //       const { startDate, endDate } = getLastMonthDateRange();
-        //       const summaryStats = await sequelize.query(`
-        //         WITH DateRange AS (
-        //           -- Use last month's date range
-        //           SELECT 
-        //               :startDate AS start_date,
-        //               :endDate AS end_date
-        //         ),
-        //         DueLoans AS (
-        //           -- Select only loans that exist in due_loan_datas
-        //           SELECT DISTINCT loan_id FROM due_loan_datas
-        //         ),
-        //         ClosedLoans AS (
-        //           -- Get loans that are marked as "Closed" and exist in due_loan_datas
-        //           -- Within the date range
-        //           SELECT DISTINCT acd.loan_id
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //           WHERE acd.application_status = 'Closed'
-        //         ),
-        //         ClosedLoanSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS closed_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS closed_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS closed_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS closed_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN ClosedLoans cl ON acd.loan_id = cl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //         ),
-        //         ActiveLoanSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS active_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS active_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS active_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS active_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //           WHERE acd.loan_id NOT IN (SELECT loan_id FROM ClosedLoans)
-        //         ),
-        //         OverallSummary AS (
-        //           SELECT 
-        //               COALESCE(SUM(acd.total_collected), 0) AS overall_total_collected,
-        //               COALESCE(SUM(acd.penalty_collected), 0) AS overall_penalty_collected,
-        //               COALESCE(SUM(acd.principal_collected), 0) AS overall_principal_collected,
-        //               COALESCE(SUM(acd.interest_collected), 0) AS overall_interest_collected
-        //           FROM actual_collection_data acd
-        //           JOIN DueLoans dl ON acd.loan_id = dl.loan_id
-        //           JOIN DateRange dr ON DATE(acd.collection_date) BETWEEN dr.start_date AND dr.end_date
-        //         )
-        //         SELECT 
-        //           cs.closed_total_collected,
-        //           cs.closed_penalty_collected,
-        //           cs.closed_principal_collected,
-        //           cs.closed_interest_collected,
-        //           asum.active_total_collected,
-        //           asum.active_penalty_collected,
-        //           asum.active_principal_collected,
-        //           asum.active_interest_collected,
-        //           os.overall_total_collected,
-        //           os.overall_penalty_collected,
-        //           os.overall_principal_collected,
-        //           os.overall_interest_collected,
-        //           :startDate AS start_date,
-        //           :endDate AS end_date
-        //         FROM ClosedLoanSummary cs
-        //         CROSS JOIN ActiveLoanSummary asum
-        //         CROSS JOIN OverallSummary os`,
-        //         {
-        //           replacements: {
-        //             startDate: startDate,
-        //             endDate: endDate
-        //           },
-        //           type: QueryTypes.SELECT
-        //         }
-        //       );
-              
-        //       return summaryStats;
-        //     }
-
-        //                     // If no results, return zeros for all fields
-        //     const defaultStats = {
-        //         closed_total_collected: 0,
-        //         closed_penalty_collected: 0,
-        //         closed_principal_collected: 0,
-        //         closed_interest_collected: 0,
-        //         active_total_collected: 0,
-        //         active_penalty_collected: 0,
-        //         active_principal_collected: 0,
-        //         active_interest_collected: 0,
-        //         overall_total_collected: 0,
-        //         overall_penalty_collected: 0,
-        //         overall_principal_collected: 0,
-        //         overall_interest_collected: 0,
-        //         collection_date: null
-        //     };
-
-        //     const result = summaryStats.length > 0 ? summaryStats[0] : defaultStats;
-        //     const generalStatsResult = generalStats.length > 0 ? generalStats[0] : {
-        //         total_calls: 0,
-        //         total_contacted_calls: 0,
-        //         total_not_contacted_calls: 0,
-        //         total_unique_customers: 0,
-        //         unique_contacted_customers: 0,
-        //         unique_not_contacted_customers: 0,
-        //         total_customers_paid: 0,
-        //         total_amount_paid: 0,
-        //         contacted_customers_paid: 0,
-        //         contacted_amount_paid: 0,
-        //         not_contacted_customers_paid: 0,
-        //         not_contacted_amount_paid: 0
-        //     };
-
-
-
-        //     const weeklyStats = await getWeeklyStatistics();
-
-        //     const monthlyStats = await getMonthlyStatistics();
-
-        //     return {summaryStats:result, generalStats:generalStatsResult,
-        //         weeklyStats:weeklyStats[0], monthlyStats:monthlyStats[0],}
-        // };
+  
         
         const { startDate, endDate } = req.body;
-
-        
-        // // Validate dates if provided
-        // if ((startDate && !endDate) || (!startDate && endDate)) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Both startDate and endDate are required for date filtering'
-        //     });
-        // }
-
 
 
         function getDateRange(startDate, endDate) {
@@ -1312,13 +842,41 @@ async function getCollectionStatisticsPerUser(req, res) {
                     }
                 ),
 
+
+
+
+                sequelize.query(`
+                    SELECT 
+                        al.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        COUNT(DISTINCT al.loan_id) AS total_assigned_customer,    -- Added comma here
+                        SUM(dld.outstanding_balance) AS total_due_amount         -- Capitalized SUM and removed trailing comma
+                    FROM assigned_loans al
+                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId  -- Changed to LEFT JOIN to preserve officers
+                    LEFT JOIN due_loan_datas dld ON al.loan_id = dld.loan_id    -- Changed to LEFT JOIN to include all assigned loans
+                    WHERE 1=1    -- Base condition that allows easy addition of AND conditions
+                    ${collectiondateCondition}
+                    GROUP BY al.officer_id, ui.userName, ui.fullName
+                    ORDER BY al.officer_id`,   
+                    {
+                        replacements: { 
+                            ...(startDate && endDate && { startDate, endDate })
+                        },
+                        type: QueryTypes.SELECT
+                    }
+                ),
+                
+                
+                
+
             ]);
         
             return statistics;
         };
         
         // // Process the results
-        const [basicStats, neverContacted, neverContactedWithStatus, collectionSummary] = await getOfficerStatistics(parsedStartDate, parsedEndDate);
+        const [basicStats, neverContacted, neverContactedWithStatus, collectionSummary,assigned_customer] = await getOfficerStatistics(parsedStartDate, parsedEndDate);
         
         const finalStats = basicStats.map(officer => ({
             officer_id: officer.officer_id,
@@ -1338,6 +896,10 @@ async function getCollectionStatisticsPerUser(req, res) {
                 total_penalty_collected_per_user: 0,
                 total_principal_collected_per_user: 0,
                 total_interest_collected_per_user: 0
+            },
+            assigned_customer: assigned_customer.find(cs => cs.officer_id === officer.officer_id) || {
+                total_assigned_customer: 0,
+                total_due_amount: 0
             }
         }))      
         return res.status(200).json({data:{
