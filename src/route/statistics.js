@@ -6,6 +6,7 @@ const collectionStat=require("../controller/collectionStatistics")
 
 router.post("/getCollectionStatistics", statisticsRouter.getCollectionStatistics)
 router.post("/getOverAllCollection", collectionStat.getCollectionStatistics)
+router.post("/getCollectionPerUser", statisticsRouter.getCollectionStatisticsPerUser)
 
 
 module.exports=router
