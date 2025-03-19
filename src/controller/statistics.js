@@ -13,20 +13,9 @@ const { stat } = require("fs");
 
 
 async function getCollectionStatistics(req, res) {
-    // console.log("===========-------------========", req.body)
     try {
 
         const getSummaryStats = async (startDate = null, endDate = null) => {
-            // Build the date range condition
-            const dateCondition = startDate && endDate 
-                ? 'AND ci.date BETWEEN :startDate AND :endDate' 
-                : '';
-
-            const collectiondateCondition = startDate && endDate 
-                ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
-                : '';
-
-
             const summaryStats = await sequelize.query(`
                 WITH MaxDateInfo AS (
                     -- Get the maximum collection date from actual_collection_data
@@ -38,6 +27,7 @@ async function getCollectionStatistics(req, res) {
                 DueLoans AS (
                     -- Select only loans that exist in due_loan_datas
                     SELECT DISTINCT loan_id FROM due_loan_datas
+                    where product_type="Michu Wabii"
                 ),
                 ClosedLoans AS (
                     -- Get loans that are marked as "Closed" and exist in due_loan_datas
@@ -464,7 +454,7 @@ async function getCollectionStatistics(req, res) {
                 weeklyStats:weeklyStats[0], monthlyStats:monthlyStats[0],}
         };
         
-        const { startDate, endDate } = req.body;
+        const { startDate, endDate,productType } = req.body;
 
         
         // Validate dates if provided
@@ -497,7 +487,7 @@ async function getCollectionStatistics(req, res) {
         const dateRange = startDate ? getDateRange(startDate, endDate) : null;
         const parsedStartDate = dateRange?.startDate || null;
         const parsedEndDate = dateRange?.endDate || null;
-
+        const parsedProductType = productType || null;
         // Validate date format
 
         if (startDate && endDate) {
@@ -513,13 +503,17 @@ async function getCollectionStatistics(req, res) {
 
         const { summaryStats, generalStats,weeklyStats,monthlyStats }= await getSummaryStats(parsedStartDate, parsedEndDate);
 
-        const getOfficerStatistics = async (startDate = null, endDate = null) => {
+        const getOfficerStatistics = async (startDate = null, endDate = null, prodcutType=null) => {
             const dateCondition = startDate && endDate 
                 ? 'AND ci.date BETWEEN :startDate AND :endDate' 
                 : '';
 
             const collectiondateCondition = startDate && endDate 
                 ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
+                : '';
+            
+            const productTypeCondition = prodcutType 
+                ? `AND dld.product_type = :productType`
                 : '';
         
             const statistics = await Promise.all([
@@ -602,34 +596,32 @@ async function getCollectionStatistics(req, res) {
                     }
                 ),
 
-
-
-
-                // Collection summary by officer, only for loan_ids present in due_loan_datas
                 sequelize.query(`
                     SELECT 
                         al.officer_id,
                         ui.userName,
                         ui.fullName,
-                        SUM(acd.total_collected) AS total_collected_per_user,
-                        SUM(acd.penalty_collected) AS total_penalty_collected_per_user,
-                        SUM(acd.principal_collected) AS total_principal_collected_per_user,
-                        SUM(acd.interest_collected) AS total_interest_collected_per_user
+                        SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                        SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                        SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                        SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user
                     FROM assigned_loans al
-                    JOIN user_informations ui ON al.officer_id = ui.userId
-                    JOIN actual_collection_data acd ON al.loan_id = acd.loan_id
-                    INNER JOIN due_loan_datas dld ON acd.loan_id = dld.loan_id  -- Ensures loan_id exists in due_loan_datas
-                    -- WHERE 1=1  
-                    ${collectiondateCondition}
-                    -- WHERE al.call_status = :contactedStatus 
-                    GROUP BY al.officer_id, ui.userName, ui.fullName`,
+                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId
+                    LEFT JOIN actual_collection_data acd ON al.loan_id = acd.loan_id
+                    LEFT JOIN due_loan_datas dld ON acd.loan_id = dld.loan_id
+                    where 1=1
+                        ${productTypeCondition}
+                        ${collectiondateCondition}
+                    GROUP BY al.officer_id, ui.userName, ui.fullName
+                    ORDER BY al.officer_id`,
                     {
                         replacements: { 
-                            ...(startDate && endDate && { startDate, endDate })
+                            ...(startDate && endDate && { startDate, endDate }),
+                            ...(productType && { productType })
                         },
                         type: QueryTypes.SELECT
                     }
-                ),
+                ),                
 
             ]);
         
@@ -637,7 +629,7 @@ async function getCollectionStatistics(req, res) {
         };
         
         // Process the results
-        const [basicStats, neverContacted, neverContactedWithStatus, collectionSummary] = await getOfficerStatistics(parsedStartDate, parsedEndDate);
+        const [basicStats, neverContacted, neverContactedWithStatus, collectionSummary] = await getOfficerStatistics(parsedStartDate, parsedEndDate,parsedProductType);
         
         const finalStats = basicStats.map(officer => ({
             officer_id: officer.officer_id,
@@ -675,66 +667,53 @@ async function getCollectionStatistics(req, res) {
 }
 
 
-
-
-
-
 async function getCollectionStatisticsPerUser(req, res) {
-    // console.log("===========-------------========", req.body)
     try {
-
-  
-        
-        const { startDate, endDate } = req.body;
-
+        const { startDate, endDate, productType } = req.body;
 
         function getDateRange(startDate, endDate) {
-            // Parse the dates
             const start = new Date(startDate);
             const end = new Date(endDate);
-            
-            // Set time to beginning of day for start date
             start.setHours(0, 0, 0, 0);
-            
-            // Set time to end of day for end date
             end.setHours(23, 59, 59, 999);
-            
             return { 
                 startDate: start.toISOString(), 
                 endDate: end.toISOString() 
             };
         }
 
+        const parsedProductType = productType || null;
         const dateRange = startDate ? getDateRange(startDate, endDate) : null;
         const parsedStartDate = dateRange?.startDate || null;
         const parsedEndDate = dateRange?.endDate || null;
 
-        // // Validate date format
-
-        // if (startDate && endDate) {
-
-        //     // Ensure startDate is before endDate
-        //     if (parsedStartDate > parsedEndDate) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: 'startDate must be before endDate'
-        //         });
-        //     }
-        // }
-
-        // const { summaryStats, generalStats,weeklyStats,monthlyStats }= await getSummaryStats(parsedStartDate, parsedEndDate);
-
-        const getOfficerStatistics = async (startDate = null, endDate = null) => {
+        const getOfficerStatistics = async (startDate = null, endDate = null, productType = null) => {
             const dateCondition = startDate && endDate 
                 ? 'AND ci.date BETWEEN :startDate AND :endDate' 
                 : '';
 
+            // const collectiondateCondition = startDate && endDate 
+            //     ? 'AND acd.collection_date BETWEEN :startDate AND :endDate AND dld.collection_date BETWEEN :startDate AND :endDate ' 
+            //     : '';
+
             const collectiondateCondition = startDate && endDate 
-                ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
+            ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
+            : '';
+
+            
+            const productTypeCondition = productType 
+                ? `AND dld.product_type = :productType`
                 : '';
-        
+
+            // const dldDateCondition = startDate && endDate 
+            //     ? 'AND dld.uploaded_date BETWEEN :startDate AND :endDate' 
+            //     : '';
+
+            const dldDateCondition = startDate && endDate 
+                ? 'AND dld.uploaded_date BETWEEN DATE_SUB(:startDate, INTERVAL 1 DAY) AND DATE_SUB(:endDate, INTERVAL 1 DAY)' 
+                : '';
             const statistics = await Promise.all([
-                // Get officer information along with statistics
+                // Call statistics
                 sequelize.query(`
                     SELECT 
                         ci.officer_id,
@@ -757,7 +736,7 @@ async function getCollectionStatisticsPerUser(req, res) {
                     type: QueryTypes.SELECT
                 }),
             
-                // Never contacted loans count by officer
+                // Never contacted loans
                 sequelize.query(`
                     SELECT 
                         ci1.officer_id,
@@ -783,100 +762,66 @@ async function getCollectionStatisticsPerUser(req, res) {
                         type: QueryTypes.SELECT
                     }
                 ),
-            
-                // Never contacted loans with "Not contacted" status by officer
-                sequelize.query(`
-                    SELECT 
-                        ci1.officer_id,
-                        ui.userName,
-                        ui.fullName,
-                        COUNT(DISTINCT ci1.loan_id) as count
-                    FROM customer_interactions ci1
-                    JOIN user_informations ui ON ci1.officer_id = ui.userId
-                    WHERE NOT EXISTS (
-                        SELECT 1 
-                        FROM customer_interactions ci2
-                        WHERE ci2.loan_id = ci1.loan_id 
-                        AND ci2.call_status = :contactedStatus
-                        ${dateCondition.replace(/ci\./g, 'ci2.')}
-                    )
-                    AND ci1.call_status = :notContactedStatus
-                    ${dateCondition.replace(/ci\./g, 'ci1.')}
-                    GROUP BY ci1.officer_id, ui.userName, ui.fullName`,
-                    {
-                        replacements: { 
-                            contactedStatus: 'Contacted',
-                            notContactedStatus: 'Not contacted',
-                            ...(startDate && endDate && { startDate, endDate })
-                        },
-                        type: QueryTypes.SELECT
-                    }
-                ),
 
-
-
-
-                // Collection summary by officer, only for loan_ids present in due_loan_datas
+                // Collection statistics
                 sequelize.query(`
                     SELECT 
                         al.officer_id,
                         ui.userName,
                         ui.fullName,
-                        SUM(acd.total_collected) AS total_collected_per_user,
-                        SUM(acd.penalty_collected) AS total_penalty_collected_per_user,
-                        SUM(acd.principal_collected) AS total_principal_collected_per_user,
-                        SUM(acd.interest_collected) AS total_interest_collected_per_user
+                        SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                        SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                        SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                        SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user
                     FROM assigned_loans al
-                    JOIN user_informations ui ON al.officer_id = ui.userId
-                    JOIN actual_collection_data acd ON al.loan_id = acd.loan_id
-                    INNER JOIN due_loan_datas dld ON acd.loan_id = dld.loan_id  -- Ensures loan_id exists in due_loan_datas
-                    -- WHERE 1=1  
-                    ${collectiondateCondition}
-                    -- WHERE al.call_status = :contactedStatus 
-                    GROUP BY al.officer_id, ui.userName, ui.fullName`,
-                    {
-                        replacements: { 
-                            ...(startDate && endDate && { startDate, endDate })
-                        },
-                        type: QueryTypes.SELECT
-                    }
-                ),
-
-
-
-
-                sequelize.query(`
-                    SELECT 
-                        al.officer_id,
-                        ui.userName,
-                        ui.fullName,
-                        COUNT(DISTINCT al.loan_id) AS total_assigned_customer,    -- Added comma here
-                        SUM(dld.outstanding_balance) AS total_due_amount         -- Capitalized SUM and removed trailing comma
-                    FROM assigned_loans al
-                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId  -- Changed to LEFT JOIN to preserve officers
-                    LEFT JOIN due_loan_datas dld ON al.loan_id = dld.loan_id    -- Changed to LEFT JOIN to include all assigned loans
-                    WHERE 1=1    -- Base condition that allows easy addition of AND conditions
-                    ${collectiondateCondition}
+                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId
+                    LEFT JOIN actual_collection_data acd ON al.loan_id = acd.loan_id
+                    LEFT JOIN due_loan_datas dld ON acd.loan_id = dld.loan_id
+                    WHERE 1=1
+                        ${productTypeCondition}
+                        ${collectiondateCondition}
                     GROUP BY al.officer_id, ui.userName, ui.fullName
-                    ORDER BY al.officer_id`,   
+                    ORDER BY total_collected_per_user DESC`,
                     {
                         replacements: { 
-                            ...(startDate && endDate && { startDate, endDate })
+                            ...(startDate && endDate && { startDate, endDate }),
+                            ...(productType && { productType })
                         },
                         type: QueryTypes.SELECT
                     }
                 ),
-                
-                
-                
 
+                // Assigned customers and due amounts
+                sequelize.query(`
+                    SELECT 
+                        al.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        COUNT(DISTINCT al.loan_id) AS total_assigned_customer,
+                        SUM(COALESCE(dld.outstanding_balance, 0)) AS total_due_amount
+                    FROM assigned_loans al
+                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld ON al.loan_id = dld.loan_id
+                    WHERE 1=1
+                        ${productTypeCondition}
+                        ${dldDateCondition}
+                    GROUP BY al.officer_id, ui.userName, ui.fullName
+                    `,
+                    {
+                        replacements: { 
+                            ...(productType && { productType }),
+                            ...(startDate && endDate && { startDate, endDate }),
+                        },
+                        type: QueryTypes.SELECT
+                    }
+                ),
             ]);
-        
+            
             return statistics;
         };
         
-        // // Process the results
-        const [basicStats, neverContacted, neverContactedWithStatus, collectionSummary,assigned_customer] = await getOfficerStatistics(parsedStartDate, parsedEndDate);
+        const [basicStats, neverContacted, collectionSummary, assigned_customer] = 
+            await getOfficerStatistics(parsedStartDate, parsedEndDate, parsedProductType);
         
         const finalStats = basicStats.map(officer => ({
             officer_id: officer.officer_id,
@@ -888,8 +833,7 @@ async function getCollectionStatisticsPerUser(req, res) {
                 uniqueContactedLoansCount: parseInt(officer.unique_contacted_loans) || 0,
                 uniqueNotContactedLoansCount: parseInt(officer.unique_not_contacted_loans) || 0,
                 totalUniqueLoans: parseInt(officer.total_unique_loans) || 0,
-                neverContactedLoansCount: parseInt(neverContacted.find(nc => nc.officer_id === officer.officer_id)?.count || 0),
-                neverContactedWithStatusCount: parseInt(neverContactedWithStatus.find(nc => nc.officer_id === officer.officer_id)?.count || 0)
+                neverContactedLoansCount: parseInt(neverContacted.find(nc => nc.officer_id === officer.officer_id)?.count || 0)
             },
             collection_summary: collectionSummary.find(cs => cs.officer_id === officer.officer_id) || {
                 total_collected_per_user: 0,
@@ -901,27 +845,18 @@ async function getCollectionStatisticsPerUser(req, res) {
                 total_assigned_customer: 0,
                 total_due_amount: 0
             }
-        }))      
-        return res.status(200).json({data:{
-            // summaryStats,
-            // weeklyStats,
-            // monthlyStats,
-            // generalStats,
-            statistics: finalStats
-        }
+        }));
+
+        return res.status(200).json({
+            data: {
+                statistics: finalStats
+            }
         });
     } catch (error) {
         console.error('Error fetching collection statistics:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-        // throw error;
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-
-
-// module.exports = {
-//     getCollectionStatistics
-// };
-
 
 module.exports = {
     getCollectionStatistics,
