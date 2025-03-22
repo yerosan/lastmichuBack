@@ -42,7 +42,6 @@ const addInteraction = async (req, res) => {
                 date:dataSet.date
             }
         })
-
         if(checkCustomerExistance){
             let interaction_id=checkCustomerExistance.dataValues.interaction_id
             const updatedInteraction = await CustomerInteraction.update({
@@ -99,7 +98,7 @@ const addInteraction = async (req, res) => {
                 }, { transaction });
             }
             
-            if(dataSet.remark=="Emergency Contact"){
+            if(dataSet.remark=="Emergency Contact" || dataSet.remark=="Emergency Not Contacted"){
                 const emergencyContactResponse=await ECRModel.upsert({
                     ecr_id:interaction_id,
                     officer_id:dataSet.officer_id,
@@ -160,7 +159,7 @@ const addInteraction = async (req, res) => {
                date:dataSet.date
             }, { transaction })
           }
-          if(dataSet.remark=="Emergency Contact"){
+          if(dataSet.remark=="Emergency Contact" || dataSet.remark=="Emergency Not Contacted"){
               const emergencyContactResponse=await ECRModel.create({
                   ecr_id:newInteraction.interaction_id,
                   officer_id:dataSet.officer_id,
@@ -287,7 +286,7 @@ const PTPInteraction=async (req, res) => {
                 }, { transaction });
             }
             
-            if(dataSet.remark=="Emergency Contact"){
+            if(dataSet.remark=="Emergency Contact" || dataSet.remark=="Emergency Contact"){
                 const emergencyContactResponse=await ECRModel.upsert({
                     ecr_id:interaction_id,
                     officer_id:dataSet.officer_id,

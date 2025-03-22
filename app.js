@@ -24,7 +24,10 @@ const cdkSequelize = require("./src/db/db");
 
 // 🏗️ Initialize Express App
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "500mb", extended: true }));
+
+// app.use(express.json());
 app.use(helmet());
 
 
@@ -109,3 +112,4 @@ process.on("unhandledRejection", (err) => {
     console.error("⚠️ Unhandled Promise Rejection:", err);
     process.exit(1);
 });
+ 
