@@ -2,7 +2,7 @@ const e = require("express");
 const CustomerInteraction = require("../models/customerInteraction");
 const ActualCollectionModel=require("../models/actualCollecttion")
 
-const { AssignedLoans, ActiveOfficers, DueLoanData,UserInformations} = require("../models");
+const { AssignedLoans, ActiveOfficers, DueLoanData,UserInformations,DistrictList, BranchList } = require("../models");
 
 const { Sequelize, where } = require("sequelize");
 const CollectionModel = require("../models/collectionModel");
@@ -784,16 +784,42 @@ const getInteractionsByDate = async (req, res) => {
 
 
 const getInteractionsByOfficerAndDate = async (req, res) => {
+    const { officer_id, page = 1, limit = 10, search, call_response, branch_code, dis_Id } = req.body;
     try {
-        const { officer_id, page = 1, limit = 10, search, call_response } = req.body;
-
+        // const { officer_id, page = 1, limit = 10, search, call_response, branch_code, dis_Id } = req.body;
+        const team= await ActiveOfficers.findOne({
+            where:{officerId:officer_id},
+            attributes: ["team"]})
         if (!officer_id) {
             return res.status(200).json({
                 status: "Error",
                 message: "Officer ID is required."
             });
         }
+        console.log("========----Team---======", team)
+        const getTeamCondition = (team) => {
+            if (team === "follow_up") {
+                return {
+                    collection_status: "Active",
+                    npl_status: "Performing",
+                    npl_assignment_status: "UNASSIGNED"
+                };
+            } else {
+                return {
+                    collection_status: "Active"
+                };
+            }
+        };
+        console.log("========----Team condition---======",getTeamCondition(team?.team))
+        const branchFilter = {};
+        if (branch_code) {
+            branchFilter.branch_code = branch_code;
+        }
 
+        const districtFilter = {};
+        if (dis_Id) {
+            districtFilter.dis_Id =  dis_Id;
+        }
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
         // Exclude fully paid loans
@@ -831,7 +857,23 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },
-                    where: { collection_status: "Active" }
+                    where: getTeamCondition(team?.team),
+                    include: [
+                        {
+                            model: BranchList,
+                            as: "branch",
+                            attributes: ["branch_code", "branch_name"],
+                            where: branchFilter,  // Apply branch name filter
+                            include: [
+                                {
+                                    model: DistrictList,
+                                    as: "district",
+                                    attributes: ["dis_Id", "district_name"],
+                                    where: districtFilter,  // Apply district name filter
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
                     model: ActiveOfficers,
@@ -904,7 +946,7 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching interactions:", error);
+        console.log("Error fetching interactions:", error);
         res.status(500).json({
             status: "Error",
             message: "Internal server error"
@@ -920,14 +962,54 @@ const getInteractionsByOfficerAndDate = async (req, res) => {
 
 
 const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
+    const { officer_id, page = 1, limit = 10, search, call_response, branch_code, dis_Id } = req.body;
+    // branch_code, dis_Id 
+    // console.log("===========-------District and branhc", req.body)
     try {
-        const { officer_id, page = 1, limit = 10, search, call_response } = req.body;
+        // const { officer_id, page = 1, limit = 10, search, call_response, branch_code, dis_Id } = req.body;
+
+        // console.log("===========-------District and branhc", dis_Id, branch_code)
+
+
+        const team= await ActiveOfficers.findOne({
+            where:{officerId:officer_id},
+            attributes: ["team"]})
+        if (!officer_id) {
+            return res.status(200).json({
+                status: "Error",
+                message: "Officer ID is required."
+            });
+        }
+
+        const getTeamCondition = (team) => {
+            if (team === "follow_up") {
+                return {
+                    collection_status: "Active",
+                    npl_status: "Performing",
+                    npl_assignment_status: "UNASSIGNED"
+                };
+            } else {
+                return {
+                    collection_status: "Active"
+                };
+            }
+        };
 
         if (!officer_id) {
             return res.status(200).json({
                 status: "Error",
                 message: "Officer ID is required."
             });
+        }
+        
+        const branchFilter = {};
+        if (branch_code) {
+            branchFilter.branch_code = branch_code;
+        }
+
+        const districtFilter = {};
+        if (dis_Id) {
+            districtFilter.dis_Id =  dis_Id;
         }
 
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -967,7 +1049,23 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },
-                    where: { collection_status: "Active" }
+                    where: getTeamCondition(team?.team),
+                    include: [
+                        {
+                            model: BranchList,
+                            as: "branch",
+                            attributes: ["branch_code", "branch_name"],
+                            where: branchFilter,  // Apply branch name filter
+                            include: [
+                                {
+                                    model: DistrictList,
+                                    as: "district",
+                                    attributes: ["dis_Id", "district_name"],
+                                    where: districtFilter,  // Apply district name filter
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
                     model: ActiveOfficers,
@@ -1040,7 +1138,7 @@ const getNotContactedInteractionsByOfficerAndDate = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching interactions:", error);
+        console.log("Error fetching interactions:", error);
         res.status(500).json({
             status: "Error",
             message: "Internal server error"
@@ -2224,12 +2322,37 @@ const promiseTopay = async (req, res) => {
     const data = req.body;
     const { page = 1, limit = 10,date } = data; // Default values added
 
+    
+
     if (!data.officer_id) {
         return res.status(200).json({
             status: "error",
             message: "Officer id is required"
         });
     }
+    const team= await ActiveOfficers.findOne({
+        where:{officerId:data.officer_id},
+        attributes: ["team"]})
+    if (!data.officer_id) {
+        return res.status(200).json({
+            status: "Error",
+            message: "Officer ID is required."
+        });
+    }
+
+    const getTeamCondition = (team) => {
+        if (team === "follow_up") {
+            return {
+                collection_status: "Active",
+                npl_status: "Performing",
+                npl_assignment_status: "UNASSIGNED"
+            };
+        } else {
+            return {
+                collection_status: "Active"
+            };
+        }
+    };
 
     try {
         if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
@@ -2253,7 +2376,7 @@ const promiseTopay = async (req, res) => {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },
-                    where: { collection_status: "Active" }
+                    where: getTeamCondition(team?.team)
                 },
                 {
                     model: ActiveOfficers,

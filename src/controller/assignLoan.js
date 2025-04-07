@@ -1,6 +1,6 @@
 const { Model, where } = require("sequelize");
 const { Op, Sequelize } = require("sequelize");
-const { AssignedLoans, DueLoanData, ActiveOfficers, UserInformations, CustomerInteraction, Payment } = require("../models");
+const { AssignedLoans, DueLoanData, ActiveOfficers, UserInformations, CustomerInteraction, Payment,DistrictList, BranchList } = require("../models");
 const _ = require("lodash");
 
 const assignLoans = async (req, res) => {
@@ -220,11 +220,144 @@ const getAssignedLoans = async (req, res) => {
 
 
 
+// const getUserAssignedLoans = async (req, res) => {
+//     try {
+//         const { userId, date, page = 1, limit = 10, officer_id, product_type,search } = req.body;  
+
+//         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);  
+
+//         const excludedLoanIds = Sequelize.literal(`
+//             loan.loan_id NOT IN (
+//                 SELECT customer_interactions.loan_id FROM customer_interactions 
+//             ) 
+//             AND loan.loan_id NOT IN (
+//                 SELECT payments.loan_id FROM payments WHERE payment_type = "fully paid"
+//             )
+//         `);
+
+//         const loanFilter = {collection_status:"Active",};  
+//         if (product_type) {
+//             loanFilter.product_type = product_type;  
+//         }
+
+
+//         const { count, rows } = await AssignedLoans.findAndCountAll({
+//             where: {
+//                 ...(date.startDate && date.endDate && {assigned_date: { [Op.between]: [date.startDate, date.endDate] }}),
+//                 officer_id: officer_id,
+//                 [Op.and]: [excludedLoanIds],
+//                 ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  
+//             },
+//             include: [
+//                 {
+//                     model: DueLoanData,
+//                     as: "loan",
+//                     attributes: { exclude: ["createdAt", "updatedAt"] },  
+//                     where: loanFilter ,
+//                     include: [
+//                         {
+//                             model: BranchList,
+//                             as: "branch",
+//                             attributes: ["branch_code", "branch_name"],
+//                             include: [
+//                                 {
+//                                     model: DistrictList,
+//                                     as: "district",
+//                                     attributes: ["dis_Id", "district_name"]
+//                                 }
+//                             ]
+//                         }
+//                     ]
+//                 },
+//                 {
+//                     model: ActiveOfficers,
+//                     as: "officer",
+//                     attributes: ["officerId"],
+//                     required: true,  
+//                     include: [
+//                         {
+//                             model: UserInformations,
+//                             as: "userInfos",
+//                             attributes: ["userName", "fullName"],  
+//                             required: true
+//                         }
+//                     ]
+//                 }
+//             ],
+//             attributes: ["assigned_id", "customer_phone", "assigned_date"],
+//             order: [
+//                 ["assigned_date", "DESC"], // 1st priority: Sort by date (most recent first)
+//                 [Sequelize.col("loan.outstanding_balance"), "DESC"] // 2nd priority: If same date, sort by amount
+//             ],
+//             limit: parseInt(limit, 10),  
+//             offset: parseInt(offset, 10),  
+//             raw: true,  
+//             nest: true  
+//         });        
+
+//         if (count > 0) {
+//             res.status(200).json({
+//                 status: "Success",
+//                 message: "Success",
+//                 totalRecords: count,  
+//                 totalPages: Math.ceil(count / limit),  
+//                 currentPage: parseInt(page, 10),
+//                 pageSize: parseInt(limit, 10),
+//                 data: rows
+//             });
+//         } else {
+//             res.status(200).json({ 
+//                 status: "Error",
+//                 message: "No customer left without attempting to connect." 
+//             });
+//         }
+
+//     } catch (error) {
+//         console.error("Error fetching assigned loans:", error);
+//         res.status(500).json({
+//             status: "Error",
+//             message: "Internal server error" 
+//         });
+//     }
+// };
+
+
+
+
+
+
+
 const getUserAssignedLoans = async (req, res) => {
     try {
-        const { userId, date, page = 1, limit = 10, officer_id, product_type,search } = req.body;  
+        const { userId, date, page = 1, limit = 10, officer_id, product_type, search, branch_name, district_name } = req.body;  
 
         const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);  
+
+        const team= await ActiveOfficers.findOne({
+            where:{officerId:officer_id},
+            attributes: ["team"]})
+        if (!officer_id) {
+            return res.status(200).json({
+                status: "Error",
+                message: "Officer ID is required."
+            });
+        }
+
+        const getTeamCondition = (team) => {
+            if (team === "follow_up") {
+                return {
+                    collection_status: "Active",
+                    npl_status: "Performing",
+                    npl_assignment_status: "UNASSIGNED",
+                    ...(product_type && { product_type })
+                };
+            } else {
+                return {
+                    collection_status: "Active",
+                    ...(product_type && { product_type })
+                };
+            }
+        };
 
         const excludedLoanIds = Sequelize.literal(`
             loan.loan_id NOT IN (
@@ -235,54 +368,23 @@ const getUserAssignedLoans = async (req, res) => {
             )
         `);
 
-        const loanFilter = {collection_status:"Active",};  
-        if (product_type) {
-            loanFilter.product_type = product_type;  
+        const loanFilter = { collection_status: "Active" }; 
+        // where: getTeamCondition(officerTeam?.team), 
+       
+
+        const branchFilter = {};
+        if (branch_name) {
+            branchFilter.branch_code = branch_name;
         }
 
-        // const { count, rows } = await AssignedLoans.findAndCountAll({
-        //     where: {
-        //         assigned_date: { [Op.between]: [date.startDate, date.endDate] },
-        //         officer_id: officer_id,
-        //         [Op.and]: [excludedLoanIds],
-        //         ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  // Dynamically add search condition if provided
-        //     },
-        //     include: [
-        //         {
-        //             model: DueLoanData,
-        //             as: "loan",
-        //             attributes: { exclude: ["createdAt", "updatedAt"] },  
-        //             where: loanFilter  // Filtering by product_type if provided
-                    
-        //         },
-        //         {
-        //             model: ActiveOfficers,
-        //             as: "officer",
-        //             attributes: ["officerId"],
-        //             required: true,  
-        //             include: [
-        //                 {
-        //                     model: UserInformations,
-        //                     as: "userInfos",
-        //                     attributes: ["userName", "fullName"],  
-        //                     required: true
-        //                 }
-        //             ]
-        //         }
-        //     ],
-        //     attributes: ["assigned_id", "customer_phone", "assigned_date"],
-        //     order: [[Sequelize.col("loan.outstanding_balance"), "DESC"]],
-        //     order: [["createdAt", "DESC"]],
-        //     limit: parseInt(limit, 10),  
-        //     offset: parseInt(offset, 10),  
-        //     raw: true,  
-        //     nest: true  
-        // });
-
+        const districtFilter = {};
+        if (district_name) {
+            districtFilter.dis_Id =  district_name;
+        }
 
         const { count, rows } = await AssignedLoans.findAndCountAll({
             where: {
-                ...(date.startDate && date.endDate && {assigned_date: { [Op.between]: [date.startDate, date.endDate] }}),
+                ...(date?.startDate && date?.endDate && { assigned_date: { [Op.between]: [date.startDate, date.endDate] } }),
                 officer_id: officer_id,
                 [Op.and]: [excludedLoanIds],
                 ...(search && { customer_phone: { [Op.like]: `%${search}%` } }),  
@@ -292,7 +394,23 @@ const getUserAssignedLoans = async (req, res) => {
                     model: DueLoanData,
                     as: "loan",
                     attributes: { exclude: ["createdAt", "updatedAt"] },  
-                    where: loanFilter  
+                    where: getTeamCondition(team?.team),
+                    include: [
+                        {
+                            model: BranchList,
+                            as: "branch",
+                            attributes: ["branch_code", "branch_name"],
+                            where: branchFilter,  // Apply branch name filter
+                            include: [
+                                {
+                                    model: DistrictList,
+                                    as: "district",
+                                    attributes: ["dis_Id", "district_name"],
+                                    where: districtFilter,  // Apply district name filter
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
                     model: ActiveOfficers,
@@ -311,8 +429,8 @@ const getUserAssignedLoans = async (req, res) => {
             ],
             attributes: ["assigned_id", "customer_phone", "assigned_date"],
             order: [
-                ["assigned_date", "DESC"], // 1st priority: Sort by date (most recent first)
-                [Sequelize.col("loan.outstanding_balance"), "DESC"] // 2nd priority: If same date, sort by amount
+                ["assigned_date", "DESC"],  
+                [Sequelize.col("loan.outstanding_balance"), "DESC"]  
             ],
             limit: parseInt(limit, 10),  
             offset: parseInt(offset, 10),  
@@ -338,15 +456,13 @@ const getUserAssignedLoans = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("Error fetching assigned loans:", error);
+        console.log("Error fetching assigned loans:", error);
         res.status(500).json({
             status: "Error",
             message: "Internal server error" 
         });
     }
 };
-
-
 
 const getUserAssignedLoansHistory = async (req, res) => {
   try {

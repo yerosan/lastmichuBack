@@ -1,8 +1,11 @@
 const fs = require("fs");
 const csv = require("csv-parser");
 const multer = require("multer");
-const { Sequelize, where } = require("sequelize");
+const { Sequelize, where , Op} = require("sequelize");
 const bulkAssignmentModel = require("../models/bulkAssignment");
+const sequelize = require("../db/db"); // Import your Sequelize instance
+const { DataTypes } = require("sequelize");
+const { AssignedLoans, ActiveOfficers, DueLoanData,UserInformations,DistrictList, BranchList } = require("../models");
 const Ajv = require("ajv");
 const { type } = require("os");
 const { format } = require("path");
@@ -12,7 +15,7 @@ const upload = multer({ dest: "uploads/" });
 const assignModel=require("../models/index")
 
 const dayjs = require("dayjs");
-const { error } = require("console");
+const { error, count } = require("console");
 
 // Validation schema
 const schema = {
@@ -217,4 +220,152 @@ const gettingLoanByOfficer=async(req, res)=>{
     }
 }
 
-module.exports = { addBulkData, gettingLoanByOfficer};
+const bulkAssignNPLLoans = async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+        // Get all recovery team officers
+        const recoveryTeamOfficers = await ActiveOfficers.findAll({
+            where: {
+                team: 'recovery'
+            },
+            attributes: ['officerId'],
+            raw: true
+        });
+
+        if (!recoveryTeamOfficers.length) {
+            return res.status(200).json({
+                status: "Error",
+                message: "No active recovery team officers found"
+            });
+        }
+
+        // Get unassigned NPL loans with their district information
+        const unassignedNPLLoans = await DueLoanData.findAll({
+            include: [{
+                model: BranchList,
+                required: true,
+                as: "branch",
+                include: [{
+                    model: DistrictList,
+                    required: true,
+                    as: "district",
+                    include: [{
+                        model: UserInformations,
+                        as: "userInfos",
+                        required: true,
+                        // attributes: [""]
+                    }],
+                    where: {
+                        officer_Id: {
+                            [Op.in]: recoveryTeamOfficers.map(officer => officer.officerId)
+                        }
+                    }
+                }]
+            }],
+            where: {
+                npl_status: 'NPL',
+                loan_id: {
+                    [Op.notIn]: Sequelize.literal(`(
+                        SELECT loan_id 
+                        FROM assigned_loans 
+                        WHERE officer_id IN (${recoveryTeamOfficers.map(o => `'${o.officerId}'`).join(',')})
+                    )`)
+                }
+            },
+            raw: true,
+            nest: true
+        });
+
+        if (!unassignedNPLLoans.length) {
+            return res.status(200).json({
+                status: "Success",
+                message: "No new NPL loans to assign"
+            });
+        }
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0]; // Gets YYYY-MM-DD format
+        // Prepare bulk assignment data
+        const assignmentData = unassignedNPLLoans.map(loan => ({
+            // assigned_id: DataTypes.UUIDV4(), // Generate UUID for each assignment
+            loan_id: loan.loan_id,
+            officer_id: loan.branch.district.officer_Id,
+            customer_phone: loan.phone_number,
+            assigned_date: formattedDate
+        }));
+
+        // // Bulk insert assignments
+        const assignments = await AssignedLoans.bulkCreate(assignmentData, {
+            transaction,
+            validate: true
+        });
+
+        // Update loan status in DueLoanData
+        await DueLoanData.update(
+            { 
+                npl_assignment_status: 'ASSIGNED',
+                last_assigned_date: new Date()
+            },
+            {
+                where: {
+                    loan_id: {
+                        [Op.in]: assignmentData.map(a => a.loan_id)
+                    }
+                },
+                transaction
+            }
+        );
+
+        await transaction.commit();
+
+        // Group assignments by officer for the response
+        const assignmentsByOfficer = assignments.reduce((acc, assignment) => {
+            if (!acc[assignment.officer_id]) {
+                acc[assignment.officer_id] = [];
+            }
+            acc[assignment.officer_id].push({
+                assigned_id: assignment.assigned_id,
+                loan_id: assignment.loan_id,
+                assigned_date: assignment.assigned_date,
+                customer_phone: assignment.customer_phone
+            });
+            return acc;
+        }, {});
+
+        return res.status(200).json({
+            status: "Success",
+            message: "NPL loans assigned successfully",
+            data: {
+                totalAssigned: assignments.length,
+                assignmentsByOfficer: Object.keys(assignmentsByOfficer).map(officerId => ({
+                    officer_id: officerId,
+                    assigned_loans_count: assignmentsByOfficer[officerId].length,
+                    assigned_loans: assignmentsByOfficer[officerId]
+                }))
+            }
+            // data:unassignedNPLLoans, 
+            // count:unassignedNPLLoans.length
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error in bulk assigning NPL loans:', error);
+        return res.status(500).json({
+            status: "Error",
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+// Add the necessary model associations if not already present
+// DueLoanData.belongsTo(BranchList, { foreignKey: 'branch_code' });
+// BranchList.belongsTo(DistrictList, { foreignKey: 'dis_Id' });
+
+// Export the endpoint
+
+
+
+
+
+module.exports = { addBulkData, gettingLoanByOfficer,bulkAssignNPLLoans};

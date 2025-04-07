@@ -8,6 +8,13 @@ const Payment = require("./payments");
 const PTPModel=require("./promiseToPay")
 const ECRModel=require("./emergencyContact")
 
+const BranchList =require("./branch_lists");
+const DistrictList = require("./district_lists");
+
+// Association: Branch belongs to a District
+BranchList.belongsTo(DistrictList, { foreignKey: "dis_Id", as: "district",});
+
+
 // CustomerInteraction Associations
 CustomerInteraction.belongsTo(DueLoanData, { foreignKey: "loan_id", as: "loan" });
 CustomerInteraction.belongsTo(ActiveOfficers, { foreignKey: "officer_id", as: "officer" });
@@ -28,6 +35,12 @@ PTPModel.belongsTo(DueLoanData, { foreignKey: "loan_id", targetKey: "loan_id", a
 PTPModel.belongsTo(ActiveOfficers, { foreignKey: "officer_id", targetKey: "officerId", as:"officer", onDelete:"CASCADE" });
 ECRModel.belongsTo(CustomerInteraction, { foreignKey: "ecr_id" ,targetKey: "interaction_id",as:"contectCustomer", onDelete:"CASCADE" });
 
+
+
+DueLoanData.belongsTo(BranchList, { foreignKey: 'branch_code',as: "branch", });
+DistrictList.belongsTo(UserInformations,{ foreignKey: 'officer_Id',targetKey: "userId",as:"userInfos", onDelete:"CASCADE"  })
+// BranchList.belongsTo(DistrictList, { foreignKey: 'dis_Id' });
+
 // Export all models from a single entry point
 module.exports = {
     sequelize,         // Export Sequelize instance (optional but useful)
@@ -38,5 +51,7 @@ module.exports = {
     CustomerInteraction,
     Payment,
     PTPModel,
-    ECRModel
+    ECRModel,
+    BranchList, 
+    DistrictList
 };

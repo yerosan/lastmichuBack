@@ -113,7 +113,7 @@ const financeDataPerUser = async (req, res) => {
             where: {
                 userId: reqData.userId,
                 transectionDate: { [Op.between]: [reqData.startDate, reqData.endDate] },
-                transectionType:{[Op.in]:["PL51410","PL65224"]}
+                transectionType:{[Op.in]:["PL51410","PL65224","PL52068"]}
             },
             attributes:["customerAccount","transectionType","debitAccount","amount","issueDate"],
             order: [['createdAt', 'DESC']]

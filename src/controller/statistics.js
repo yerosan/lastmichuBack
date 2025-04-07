@@ -15,7 +15,11 @@ const { stat } = require("fs");
 async function getCollectionStatistics(req, res) {
     try {
 
-        const getSummaryStats = async (startDate = null, endDate = null) => {
+        const getSummaryStats = async (startDate = null, endDate = null, product_type=null) => {
+            const productTypeCondition = product_type 
+                ? `AND due_loan_datas.product_type = :productType`
+                : '';
+
             const summaryStats = await sequelize.query(`
                 WITH MaxDateInfo AS (
                     -- Get the maximum collection date from actual_collection_data
@@ -27,8 +31,11 @@ async function getCollectionStatistics(req, res) {
                 DueLoans AS (
                     -- Select only loans that exist in due_loan_datas
                     SELECT DISTINCT loan_id FROM due_loan_datas
-                    where product_type="Michu Wabii"
+                    WHERE 1=1
+                    ${productTypeCondition}
                 ),
+
+
                 ClosedLoans AS (
                     -- Get loans that are marked as "Closed" and exist in due_loan_datas
                     -- Only for the max date
@@ -90,6 +97,9 @@ async function getCollectionStatistics(req, res) {
                 CROSS JOIN ActiveLoanSummary asum
                 CROSS JOIN OverallSummary os`,
                 {
+                    replacements: {
+                        ...(productType && { productType: productType })
+                    },
                     type: QueryTypes.SELECT
                 }
             );
@@ -118,10 +128,16 @@ async function getCollectionStatistics(req, res) {
             // Example of using this with your SQL query
             async function getWeeklyStatistics() {
               // Get last week's date range
-              const { startDate, endDate } = getLastWeekDateRange();
+
               
+              const { startDate, endDate } = getLastWeekDateRange();
+              const productTypeCondition = product_type 
+              ? `AND due_loan_datas.product_type = :productType`
+              : '';
               // Use the date range in your SQL query
               const WeeklyStatistics = await sequelize.query(`
+
+                
                 WITH DateRange AS (
                   -- Use last week's date range
                   SELECT 
@@ -129,8 +145,10 @@ async function getCollectionStatistics(req, res) {
                       :endDate AS end_date
                 ),
                 DueLoans AS (
-                  -- Select only loans that exist in due_loan_datas
-                  SELECT DISTINCT loan_id FROM due_loan_datas
+                    -- Select only loans that exist in due_loan_datas
+                    SELECT DISTINCT loan_id FROM due_loan_datas
+                    WHERE 1=1
+                    ${productTypeCondition}
                 ),
                 ClosedLoans AS (
                   -- Get loans that are marked as "Closed" and exist in due_loan_datas
@@ -194,7 +212,8 @@ async function getCollectionStatistics(req, res) {
                 {
                   replacements: {
                     startDate: startDate,
-                    endDate: endDate
+                    endDate: endDate,
+                    ...(productType && { productType: productType })
                   },
                   type: QueryTypes.SELECT
                 }
@@ -330,6 +349,11 @@ async function getCollectionStatistics(req, res) {
             async function getMonthlyStatistics() {
               // Get last month's date range
               const { startDate, endDate } = getLastMonthDateRange();
+
+              const productTypeCondition = product_type 
+              ? `AND due_loan_datas.product_type = :productType`
+              : '';
+
               const summaryStats = await sequelize.query(`
                 WITH DateRange AS (
                   -- Use last month's date range
@@ -338,8 +362,10 @@ async function getCollectionStatistics(req, res) {
                       :endDate AS end_date
                 ),
                 DueLoans AS (
-                  -- Select only loans that exist in due_loan_datas
-                  SELECT DISTINCT loan_id FROM due_loan_datas
+                    -- Select only loans that exist in due_loan_datas
+                    SELECT DISTINCT loan_id FROM due_loan_datas
+                    WHERE 1=1
+                    ${productTypeCondition}
                 ),
                 ClosedLoans AS (
                   -- Get loans that are marked as "Closed" and exist in due_loan_datas
@@ -402,7 +428,8 @@ async function getCollectionStatistics(req, res) {
                 {
                   replacements: {
                     startDate: startDate,
-                    endDate: endDate
+                    endDate: endDate,
+                    ...(productType && { productType: productType })
                   },
                   type: QueryTypes.SELECT
                 }
@@ -467,20 +494,49 @@ async function getCollectionStatistics(req, res) {
 
 
 
+        // function getDateRange(startDate, endDate) {
+        //     // Parse the dates
+        //     const start = new Date(startDate);
+        //     const end = new Date(endDate);
+            
+        //     // Set time to beginning of day for start date
+        //     start.setHours(0, 0, 0, 0);
+            
+        //     // Set time to end of day for end date
+        //     end.setHours(23, 59, 59, 999);
+            
+        //     return { 
+        //         startDate: start.toISOString(), 
+        //         endDate: end.toISOString() 
+        //     };
+        // }
+
+
+
+        // function getDateRange(startDate, endDate) {
+        //     // Parse the dates and create them in local timezone
+        //     const start = new Date(startDate);
+        //     const end = new Date(endDate);
+            
+        //     // Create dates for start and end of day in local timezone
+        //     const startOfDay = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+        //     const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+            
+        //     return {
+        //         startDate: startOfDay.toISOString(),
+        //         endDate: endOfDay.toISOString()
+        //     };
+        // }  
+        
+        
         function getDateRange(startDate, endDate) {
-            // Parse the dates
+            // Method 2: Using toLocaleDateString
             const start = new Date(startDate);
             const end = new Date(endDate);
             
-            // Set time to beginning of day for start date
-            start.setHours(0, 0, 0, 0);
-            
-            // Set time to end of day for end date
-            end.setHours(23, 59, 59, 999);
-            
-            return { 
-                startDate: start.toISOString(), 
-                endDate: end.toISOString() 
+            return {
+                startDate: start.toLocaleDateString('en-CA'), // 'en-CA' gives "YYYY-MM-DD" format
+                endDate: end.toLocaleDateString('en-CA')
             };
         }
 
@@ -501,7 +557,7 @@ async function getCollectionStatistics(req, res) {
             }
         }
 
-        const { summaryStats, generalStats,weeklyStats,monthlyStats }= await getSummaryStats(parsedStartDate, parsedEndDate);
+        const { summaryStats, generalStats,weeklyStats,monthlyStats }= await getSummaryStats(parsedStartDate, parsedEndDate, parsedProductType);
 
         const getOfficerStatistics = async (startDate = null, endDate = null, prodcutType=null) => {
             const dateCondition = startDate && endDate 

@@ -1,6 +1,7 @@
 const sequelize=require("sequelize")
 const userModel=require("../models/userModel")
 const activeOfficerModle=require("../models/index")
+const { districtList } = require('../models/district_lists')
 
 
 

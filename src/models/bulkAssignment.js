@@ -1,6 +1,8 @@
 const sequelize = require("../db/db");
 const { DataTypes } = require("sequelize");
 
+const BranchList =require("./branch_lists")
+
 const LoanModel = sequelize.define("due_loan_datas", {
     loan_id: {
         type: DataTypes.UUID,
@@ -11,11 +13,7 @@ const LoanModel = sequelize.define("due_loan_datas", {
         type: DataTypes.STRING,
         allowNull: false
     },
-    // loan_id: {
-    //     type: DataTypes.UUID,
-    //     allowNull: false,
-    //     unique: true,
-    // },
+   
     customer_name: {
         type: DataTypes.STRING,
         allowNull: true
@@ -94,6 +92,21 @@ const LoanModel = sequelize.define("due_loan_datas", {
       allowNull: false,
       defaultValue: "Active",
     },
+    npl_status: {
+        type: DataTypes.ENUM('NPL', 'Performing'),
+        allowNull: false,
+        defaultValue: 'Performing'
+    },
+    npl_assignment_status: {
+        type: DataTypes.ENUM('ASSIGNED', 'UNASSIGNED'),
+        allowNull: false,
+        defaultValue: 'UNASSIGNED'
+    },
+    last_assigned_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
+
     officer_name:{
         type:DataTypes.STRING,
         allowNull:true,
@@ -106,5 +119,8 @@ const LoanModel = sequelize.define("due_loan_datas", {
     }
 }
 );
+
+// Association: Loan belongs to Branch
+// LoanModel.belongsTo(BranchList, { foreignKey: "branch_code", as: "branch" });
 
 module.exports = LoanModel;

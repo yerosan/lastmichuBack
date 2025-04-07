@@ -21,6 +21,8 @@ const Complain = require("./src/models/reconciliation");
 const UserInfo = require("./src/models/userModel");
 const cdkSequelize = require("./src/db/db");
 
+const branchRoute = require("./src/route/branchRoute");
+
 
 // 🏗️ Initialize Express App
 const app = express();
@@ -89,6 +91,7 @@ app.use("/assign", assignRoute);
 app.use("/contact", contactecCustomer);
 app.use("/payment", paymentRoute);
 app.use("/statics", staticsRoute)
+app.use("/branch", branchRoute);
 
 // 🛑 Global Error Handling Middleware
 app.use((err, req, res, next) => {
