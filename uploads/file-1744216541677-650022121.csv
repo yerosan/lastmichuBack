@@ -1,0 +1,3 @@
+branch_code,custome_number,saving_account,loan_id,customer_name,phone_number,product_type,approved_amount,approved_date,maturity_date,outstanding_balance,due_principal,due_interest,due_penalty,total_dueAmount,arrears_start_date,officer_name
+ET0010133,1002659749,1.00003E+12,13e3bbbd-2863-4831-b365-8cb7d8c4dad3,Robel Hailemariam kerse,2.51914E+11,Michu Wabii,53500,20250309,20250408,57862.01,53500,4362.01,0,57862.01,20250409,20250410
+ET0010107,1014501000,1.0107E+12,0a0637bf-7cc7-4dd4-8c17-ec68a765e468,Kefeta Training and Consulting PLC,2.51914E+11,Michu Wabii,59300,20250309,20250408,63985.07,59300,4685.07,0,63985.07,20250409,20250410
