@@ -31,7 +31,10 @@ app.use(express.urlencoded({ limit: "500mb", extended: true }));
 
 // app.use(express.json());
 app.use(helmet());
-
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false
+}));
 
 // 🌍 CORS Setup with enhanced file upload support
 const allowedOrigins = [`${appUrl}`, "http://localhost:3000", "https://your-production-url.com", "http://10.12.51.20:4050"];
@@ -52,10 +55,15 @@ app.use(
             "Accept",
             "Origin",
             "Content-Length",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Headers"
         ],
+
         exposedHeaders: ["Content-Disposition","Content-Length"], // Important for file downloads
         credentials: true,
-        maxAge: 86400 // Cache preflight requests for 24 hours
+        maxAge: 86400, // Cache preflight requests for 24 hours,
+        preflightContinue: false,
+        optionsSuccessStatus: 204
     })
 );
 

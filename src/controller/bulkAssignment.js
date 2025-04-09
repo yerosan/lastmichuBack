@@ -335,16 +335,24 @@ const bulkAssignNPLLoans = async (req, res) => {
         return res.status(200).json({
             status: "Success",
             message: "NPL loans assigned successfully",
-            data: {
-                totalAssigned: assignments.length,
-                assignmentsByOfficer: Object.keys(assignmentsByOfficer).map(officerId => ({
-                    officer_id: officerId,
-                    assigned_loans_count: assignmentsByOfficer[officerId].length,
-                    assigned_loans: assignmentsByOfficer[officerId]
-                }))
-            }
+            data:
+            {
+                    assignmentsByOfficer: Object.keys(assignmentsByOfficer).map(officerId => ({
+                        officer_id: officerId,
+                        assigned_loans_count: assignmentsByOfficer[officerId].length,
+                        assigned_loans: assignmentsByOfficer[officerId]
+                    }))
+                },
+            // {
+            //     totalAssigned: assignments.length,
+            //     assignmentsByOfficer: Object.keys(assignmentsByOfficer).map(officerId => ({
+            //         officer_id: officerId,
+            //         assigned_loans_count: assignmentsByOfficer[officerId].length,
+            //         assigned_loans: assignmentsByOfficer[officerId]
+            //     }))
+            // }
             // data:unassignedNPLLoans, 
-            // count:unassignedNPLLoans.length
+            count:assignments.length,
         });
 
     } catch (error) {
@@ -358,6 +366,53 @@ const bulkAssignNPLLoans = async (req, res) => {
     }
 };
 
+
+
+
+
+const updateNPLStatusAndTeam = async (req, res) => {
+    try {
+        // Update NPL status and team assignment for active loans
+        const [updatedCount] = await bulkAssignmentModel.update(
+            {
+                npl_status: 'NPL'
+            },
+            {
+                where: {
+                    collection_status: 'Active',
+                    arrears_start_date: {
+                        [Op.lt]: sequelize.literal('DATE_SUB(CURDATE(), INTERVAL 90 DAY)')
+                    },
+                    npl_status: 'Performing' // Only update loans that aren't already NPL
+                }
+            }
+        );
+
+        if (updatedCount > 0) {
+            res.status(200).json({
+                status: "Success", 
+                message: "NPL status updated successfully", 
+                count: updatedCount
+            });
+        } else {
+            res.status(200).json({
+                status: "Success", 
+                message: "No loans required NPL status update",
+                count: 0
+            });
+        }
+
+    } catch (error) {
+        console.error('Error updating NPL status:', error);
+        res.status(500).json({
+            status: "Error", 
+            message: "Internal server error", 
+            error: error.message
+        });
+    }
+};
+
+
 // Add the necessary model associations if not already present
 // DueLoanData.belongsTo(BranchList, { foreignKey: 'branch_code' });
 // BranchList.belongsTo(DistrictList, { foreignKey: 'dis_Id' });
@@ -368,4 +423,4 @@ const bulkAssignNPLLoans = async (req, res) => {
 
 
 
-module.exports = { addBulkData, gettingLoanByOfficer,bulkAssignNPLLoans};
+module.exports = { addBulkData, gettingLoanByOfficer,bulkAssignNPLLoans, updateNPLStatusAndTeam};

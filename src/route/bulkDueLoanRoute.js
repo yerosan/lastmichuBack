@@ -37,7 +37,9 @@ router.options("/upload", cors(fileUploadCorsOptions));
 router.options("/collectionUpload", cors(fileUploadCorsOptions));
 router.options("/getDueLoan", cors(fileUploadCorsOptions));  // Add this line
 
+
 router.put("/updateNPLStatus", cors(fileUploadCorsOptions), dueLoanController.bulkAssignNPLLoans);
+router.put("/updateNPLStatusAndTeam", cors(fileUploadCorsOptions), dueLoanController.updateNPLStatusAndTeam);
 
 // 📤 Upload CSV Route
 router.post("/upload", cors(fileUploadCorsOptions), upload.single("file"), dueLoanController.addBulkData);
