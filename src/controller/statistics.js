@@ -828,23 +828,44 @@ async function getCollectionStatisticsPerUser(req, res) {
     try {
         const { startDate, endDate, productType } = req.body;
 
+        // function getDateRange(startDate, endDate) {
+        //     const start = new Date(startDate);
+        //     const end = new Date(endDate);
+        //     start.setHours(0, 0, 0, 0);
+        //     end.setHours(23, 59, 59, 999);
+        //     return { 
+        //         startDate: start.toISOString(), 
+        //         endDate: end.toISOString() 
+        //     };
+        // }
+
+        // const parsedProductType = productType || null;
+        // const dateRange = startDate ? getDateRange(startDate, endDate) : null;
+        // const parsedStartDate = dateRange?.startDate || null;
+        // const parsedEndDate = dateRange?.endDate || null;
+
+
+
+                
         function getDateRange(startDate, endDate) {
+            // Method 2: Using toLocaleDateString
             const start = new Date(startDate);
             const end = new Date(endDate);
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
-            return { 
-                startDate: start.toISOString(), 
-                endDate: end.toISOString() 
+            
+            return {
+                startDate: start.toLocaleDateString('en-CA'), // 'en-CA' gives "YYYY-MM-DD" format
+                endDate: end.toLocaleDateString('en-CA')
             };
         }
 
-        const parsedProductType = productType || null;
         const dateRange = startDate ? getDateRange(startDate, endDate) : null;
         const parsedStartDate = dateRange?.startDate || null;
         const parsedEndDate = dateRange?.endDate || null;
+        const parsedProductType = productType || null;
+
 
         const getOfficerStatistics = async (startDate = null, endDate = null, productType = null) => {
+
             const dateCondition = startDate && endDate 
                 ? 'AND ci.date BETWEEN :startDate AND :endDate' 
                 : '';
@@ -869,6 +890,10 @@ async function getCollectionStatisticsPerUser(req, res) {
             const dldDateCondition = startDate && endDate 
                 ? 'AND dld.uploaded_date BETWEEN DATE_SUB(:startDate, INTERVAL 1 DAY) AND DATE_SUB(:endDate, INTERVAL 1 DAY)' 
                 : '';
+
+            const assign_collectiondateCondition = startDate && endDate 
+            ? 'AND al.assigned_date BETWEEN :startDate AND :endDate' 
+            : '';
             const statistics = await Promise.all([
                 // Call statistics
                 sequelize.query(`
@@ -883,12 +908,16 @@ async function getCollectionStatisticsPerUser(req, res) {
                         COUNT(DISTINCT ci.loan_id) as total_unique_loans
                     FROM customer_interactions ci
                     JOIN user_informations ui ON ci.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld 
+                        ON ci.loan_id = dld.loan_id
                     WHERE 1=1 
+                    ${productTypeCondition}
                     ${dateCondition}
                     GROUP BY ci.officer_id, ui.userName, ui.fullName
                 `, {
                     replacements: {
-                        ...(startDate && endDate && { startDate, endDate })
+                        ...(startDate && endDate && { startDate, endDate }),
+                        ...(productType && { productType })
                     },
                     type: QueryTypes.SELECT
                 }),
@@ -902,6 +931,7 @@ async function getCollectionStatisticsPerUser(req, res) {
                         COUNT(DISTINCT ci1.loan_id) as count
                     FROM customer_interactions ci1
                     JOIN user_informations ui ON ci1.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld ON ci1.loan_id = dld.loan_id
                     WHERE NOT EXISTS (
                         SELECT 1 
                         FROM customer_interactions ci2
@@ -909,12 +939,14 @@ async function getCollectionStatisticsPerUser(req, res) {
                         AND ci2.call_status = :contactedStatus
                         ${dateCondition.replace(/ci\./g, 'ci2.')}
                     )
+                    ${productTypeCondition}
                     ${dateCondition.replace(/ci\./g, 'ci1.')}
                     GROUP BY ci1.officer_id, ui.userName, ui.fullName`,
                     {
                         replacements: { 
                             contactedStatus: 'Contacted',
-                            ...(startDate && endDate && { startDate, endDate })
+                            ...(startDate && endDate && { startDate, endDate }),
+                            ...(productType && { productType })
                         },
                         type: QueryTypes.SELECT
                     }
@@ -1032,7 +1064,7 @@ async function getCollectionStatisticsPerUser(req, res) {
                         ON acd.loan_id = dld.loan_id
                     WHERE 1=1
                         ${productTypeCondition}
-                        ${collectiondateCondition}
+                        ${assign_collectiondateCondition}
                         AND ((ao.team != 'recovery' AND
                             ((dld.npl_assignment_status = 'ASSIGNED' AND acd.collection_date < dld.updatedAt) OR 
                             dld.npl_assignment_status = 'UNASSIGNED'))
@@ -1065,7 +1097,7 @@ async function getCollectionStatisticsPerUser(req, res) {
                     LEFT JOIN due_loan_datas dld ON al.loan_id = dld.loan_id
                     WHERE 1=1
                         ${productTypeCondition}
-                        ${dldDateCondition}
+                        ${assign_collectiondateCondition}
                     GROUP BY al.officer_id, ui.userName, ui.fullName
                     `,
                     {
