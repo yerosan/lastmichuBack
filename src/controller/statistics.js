@@ -863,7 +863,6 @@ async function getCollectionStatisticsPerUser(req, res) {
         const parsedEndDate = dateRange?.endDate || null;
         const parsedProductType = productType || null;
     
-        console.log("===========----=====-", dateRange)
 
         const getOfficerStatistics = async (startDate = null, endDate = null, productType = null) => {
 
