@@ -9,6 +9,7 @@ router.post("/getAssignLoans", assignLoanControllers.getAssignedLoans)
 router.post("/getUserAssignedLoans", assignLoanControllers.getUserAssignedLoans)
 router.post("/getUserAssignedLoansHistory", assignLoanControllers.getUserAssignedLoansHistory)
 router.put("/updateLoanStatus", loanStatusController.updateLoanStatus)
+router.post("/nplAssigned", assignLoanControllers.nplAssigned)
 
 
 module.exports=router

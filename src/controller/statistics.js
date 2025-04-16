@@ -862,7 +862,8 @@ async function getCollectionStatisticsPerUser(req, res) {
         const parsedStartDate = dateRange?.startDate || null;
         const parsedEndDate = dateRange?.endDate || null;
         const parsedProductType = productType || null;
-
+    
+        console.log("===========----=====-", dateRange)
 
         const getOfficerStatistics = async (startDate = null, endDate = null, productType = null) => {
 
@@ -1151,7 +1152,389 @@ async function getCollectionStatisticsPerUser(req, res) {
     }
 }
 
+
+
+
+async function getRecoveryCollectionStatisticsPerUser(req, res) {
+    try {
+        const { startDate, endDate, productType } = req.body;
+
+        // function getDateRange(startDate, endDate) {
+        //     const start = new Date(startDate);
+        //     const end = new Date(endDate);
+        //     start.setHours(0, 0, 0, 0);
+        //     end.setHours(23, 59, 59, 999);
+        //     return { 
+        //         startDate: start.toISOString(), 
+        //         endDate: end.toISOString() 
+        //     };
+        // }
+
+        // const parsedProductType = productType || null;
+        // const dateRange = startDate ? getDateRange(startDate, endDate) : null;
+        // const parsedStartDate = dateRange?.startDate || null;
+        // const parsedEndDate = dateRange?.endDate || null;
+
+
+
+                
+        function getDateRange(startDate, endDate) {
+            // Method 2: Using toLocaleDateString
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            return {
+                startDate: start.toLocaleDateString('en-CA'), // 'en-CA' gives "YYYY-MM-DD" format
+                endDate: end.toLocaleDateString('en-CA')
+            };
+        }
+
+        const dateRange = startDate ? getDateRange(startDate, endDate) : null;
+        const parsedStartDate = dateRange?.startDate || null;
+        const parsedEndDate = dateRange?.endDate || null;
+        const parsedProductType = productType || null;
+
+
+        const getOfficerStatistics = async (startDate = null, endDate = null, productType = null) => {
+
+            const dateCondition = startDate && endDate 
+                ? 'AND ci.date BETWEEN :startDate AND :endDate' 
+                : '';
+
+            // const collectiondateCondition = startDate && endDate 
+            //     ? 'AND acd.collection_date BETWEEN :startDate AND :endDate AND dld.collection_date BETWEEN :startDate AND :endDate ' 
+            //     : '';
+
+            const collectiondateCondition = startDate && endDate 
+            ? 'AND acd.collection_date BETWEEN :startDate AND :endDate' 
+            : '';
+
+            
+            const productTypeCondition = productType 
+                ? `AND dld.product_type = :productType`
+                : '';
+
+            // const dldDateCondition = startDate && endDate 
+            //     ? 'AND dld.uploaded_date BETWEEN :startDate AND :endDate' 
+            //     : '';
+
+            const dldDateCondition = startDate && endDate 
+                ? 'AND dld.uploaded_date BETWEEN DATE_SUB(:startDate, INTERVAL 1 DAY) AND DATE_SUB(:endDate, INTERVAL 1 DAY)' 
+                : '';
+
+            const assign_collectiondateCondition = startDate && endDate 
+            ? 'AND al.assigned_date BETWEEN :startDate AND :endDate' 
+            : '';
+            const statistics = await Promise.all([
+                // Call statistics
+                sequelize.query(`
+                    SELECT 
+                        ci.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        COUNT(CASE WHEN ci.call_status = 'Contacted' THEN 1 END) as total_contacted,
+                        COUNT(CASE WHEN ci.call_status = 'Not contacted' THEN 1 END) as total_not_contacted,
+                        COUNT(DISTINCT CASE WHEN ci.call_status = 'Contacted' THEN ci.loan_id END) as unique_contacted_loans,
+                        COUNT(DISTINCT CASE WHEN ci.call_status = 'Not contacted' THEN ci.loan_id END) as unique_not_contacted_loans,
+                        COUNT(DISTINCT ci.loan_id) as total_unique_loans
+                    FROM customer_interactions ci
+                    JOIN user_informations ui ON ci.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld 
+                        ON ci.loan_id = dld.loan_id
+                    WHERE 1=1 
+                        ${productTypeCondition}
+                        ${dateCondition}
+                        AND ci.officer_id IN (SELECT officerId FROM active_officers WHERE team = 'recovery')
+                    GROUP BY ci.officer_id, ui.userName, ui.fullName
+                `, {
+                    replacements: {
+                        ...(startDate && endDate && { startDate, endDate }),
+                        ...(productType && { productType })
+                    },
+                    type: QueryTypes.SELECT
+                }),
+            
+                // Never contacted loans
+                sequelize.query(`
+                    SELECT 
+                        ci1.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        COUNT(DISTINCT ci1.loan_id) as count
+                    FROM customer_interactions ci1
+                    JOIN user_informations ui ON ci1.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld ON ci1.loan_id = dld.loan_id
+                    WHERE NOT EXISTS (
+                        SELECT 1 
+                        FROM customer_interactions ci2
+                        WHERE ci2.loan_id = ci1.loan_id 
+                        AND ci2.call_status = :contactedStatus
+                        ${dateCondition.replace(/ci\./g, 'ci2.')}
+                        )
+                        ${productTypeCondition}
+                        ${dateCondition.replace(/ci\./g, 'ci1.')}
+                        AND ci1.officer_id IN (
+                            SELECT officerId 
+                            FROM active_officers 
+                            WHERE team = 'recovery'
+                            )
+                        GROUP BY ci1.officer_id, ui.userName, ui.fullName`,
+                    {
+                        replacements: { 
+                            contactedStatus: 'Contacted',
+                            ...(startDate && endDate && { startDate, endDate }),
+                            ...(productType && { productType })
+                        },
+                        type: QueryTypes.SELECT
+                    }
+                ),
+
+                // Collection statistics
+                // sequelize.query(`
+                //     SELECT 
+                //         al.officer_id,
+                //         ui.userName,
+                //         ui.fullName,
+                //         SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                //         SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                //         SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                //         SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user
+                //     FROM assigned_loans al
+                //     LEFT JOIN user_informations ui ON al.officer_id = ui.userId
+                //     LEFT JOIN actual_collection_data acd ON al.loan_id = acd.loan_id
+                //     LEFT JOIN due_loan_datas dld ON acd.loan_id = dld.loan_id
+                //     WHERE 1=1
+                //         ${productTypeCondition}
+                //         ${collectiondateCondition}
+                //     GROUP BY al.officer_id, ui.userName, ui.fullName
+                //     ORDER BY total_collected_per_user DESC`,
+                //     {
+                //         replacements: { 
+                //             ...(startDate && endDate && { startDate, endDate }),
+                //             ...(productType && { productType })
+                //         },
+                //         type: QueryTypes.SELECT
+                //     }
+                // ),
+
+
+
+                // sequelize.query(`
+                //     SELECT 
+                //         al.officer_id,
+                //         ui.userName,
+                //         ui.fullName,
+                //         ao.team,
+                //         SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                //         SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                //         SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                //         SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user,
+                //         COUNT(DISTINCT acd.loan_id) as total_loans_collected
+                //     FROM assigned_loans al
+                //         USE INDEX (idx_officer_id)
+                //     INNER JOIN user_informations ui 
+                //         USE INDEX (PRIMARY)
+                //         ON al.officer_id = ui.userId
+                //     INNER JOIN active_officers ao 
+                //         USE INDEX (idx_officer_team)
+                //         ON al.officer_id = ao.officerId
+                //     LEFT JOIN actual_collection_data acd 
+                //         USE INDEX (idx_loan_collection_date)
+                //         ON al.loan_id = acd.loan_id
+                //     LEFT JOIN due_loan_datas dld 
+                //         USE INDEX (PRIMARY)
+                //         ON acd.loan_id = dld.loan_id
+                //     WHERE 1=1
+                //         ${productTypeCondition}
+                //         ${collectiondateCondition}
+                //         AND (
+                //         (ao.team != 'recovery' AND
+                //          (
+                //             (dld.npl_assignment_status = 'ASSIGNED' AND acd.collection_date < dld.updatedAt) OR 
+                //                     dld.npl_assignment_status = 'UNASSIGNED'
+                //          )
+                //         OR 
+                //             (ao.team = 'recovery' AND acd.collection_date > dld.updatedAt)
+                //         )
+                        
+                //     GROUP BY 
+                //         al.officer_id, 
+                //         ui.userName, 
+                //         ui.fullName
+                //     ORDER BY 
+                //         total_collected_per_user DESC
+                // `, {
+                //     replacements: { 
+                //         ...(startDate && endDate && { startDate, endDate }),
+                //         ...(productType && { productType })
+                //     },
+                //     type: QueryTypes.SELECT
+                // }),
+                 
+
+
+
+                // sequelize.query(`
+                //     SELECT 
+                //         al.officer_id,
+                //         ui.userName,
+                //         ui.fullName,
+                //         ao.team,
+                //         SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                //         SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                //         SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                //         SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user,
+                //         COUNT(DISTINCT acd.loan_id) as total_loans_collected
+                //     FROM assigned_loans al
+                //         USE INDEX (idx_officer_id)
+                //     INNER JOIN user_informations ui 
+                //         USE INDEX (PRIMARY)
+                //         ON al.officer_id = ui.userId
+                //     INNER JOIN active_officers ao 
+                //         USE INDEX (idx_officer_team)
+                //         ON al.officer_id = ao.officerId
+                //     LEFT JOIN actual_collection_data acd 
+                //         USE INDEX (idx_loan_collection_date)
+                //         ON al.loan_id = acd.loan_id
+                //     LEFT JOIN due_loan_datas dld 
+                //         USE INDEX (PRIMARY)
+                //         ON acd.loan_id = dld.loan_id
+                //     WHERE 1=1
+                //         ${productTypeCondition}
+                //         ${assign_collectiondateCondition}
+                //         AND ((ao.team != 'recovery' AND
+                //             ((dld.npl_assignment_status = 'ASSIGNED' AND acd.collection_date < dld.updatedAt) OR 
+                //             dld.npl_assignment_status = 'UNASSIGNED'))
+                //         OR (ao.team = 'recovery' AND acd.collection_date > dld.updatedAt))
+                //     GROUP BY 
+                //         al.officer_id, 
+                //         ui.userName, 
+                //         ui.fullName
+                //     ORDER BY 
+                //         total_collected_per_user DESC
+                // `, {
+                //     replacements: { 
+                //         ...(startDate && endDate && { startDate, endDate }),
+                //         ...(productType && { productType })
+                //     },
+                //     type: QueryTypes.SELECT
+                // }),
+
+
+                sequelize.query(`
+                    SELECT 
+                        al.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        ao.team,
+                        SUM(COALESCE(acd.total_collected, 0)) AS total_collected_per_user,
+                        SUM(COALESCE(acd.penalty_collected, 0)) AS total_penalty_collected_per_user,
+                        SUM(COALESCE(acd.principal_collected, 0)) AS total_principal_collected_per_user,
+                        SUM(COALESCE(acd.interest_collected, 0)) AS total_interest_collected_per_user,
+                        COUNT(DISTINCT acd.loan_id) as total_loans_collected
+                    FROM active_officers ao 
+                        USE INDEX (idx_officer_team)
+                    INNER JOIN assigned_loans al
+                        USE INDEX (idx_officer_id)
+                        ON al.officer_id = ao.officerId
+                    INNER JOIN user_informations ui 
+                        USE INDEX (PRIMARY)
+                        ON al.officer_id = ui.userId
+                    INNER JOIN actual_collection_data acd 
+                        USE INDEX (idx_loan_collection_date)
+                        ON al.loan_id = acd.loan_id
+                    INNER JOIN due_loan_datas dld 
+                        USE INDEX (PRIMARY)
+                        ON acd.loan_id = dld.loan_id
+                    WHERE ao.team = 'recovery'
+                        ${productTypeCondition}
+                        ${assign_collectiondateCondition}
+                        AND acd.collection_date > dld.updatedAt
+                    GROUP BY 
+                        al.officer_id, 
+                        ui.userName, 
+                        ui.fullName
+                    ORDER BY 
+                        total_collected_per_user DESC
+                `, {
+                    replacements: { 
+                        ...(startDate && endDate &&{ startDate, endDate }),
+                        ...(productType && { productType })
+                    },
+                    type: QueryTypes.SELECT
+                }),
+                
+                
+
+                // Assigned customers and due amounts
+                sequelize.query(`
+                    SELECT 
+                        al.officer_id,
+                        ui.userName,
+                        ui.fullName,
+                        COUNT(DISTINCT al.loan_id) AS total_assigned_customer,
+                        SUM(COALESCE(dld.outstanding_balance, 0)) AS total_due_amount
+                    FROM assigned_loans al
+                    LEFT JOIN user_informations ui ON al.officer_id = ui.userId
+                    LEFT JOIN due_loan_datas dld ON al.loan_id = dld.loan_id
+                    WHERE 1=1
+                        ${productTypeCondition}
+                        ${assign_collectiondateCondition}
+                    GROUP BY al.officer_id, ui.userName, ui.fullName
+                    `,
+                    {
+                        replacements: { 
+                            ...(productType && { productType }),
+                            ...(startDate && endDate && { startDate, endDate }),
+                        },
+                        type: QueryTypes.SELECT
+                    }
+                ),
+            ]);
+            
+            return statistics;
+        };
+        
+        const [basicStats, neverContacted, collectionSummary, assigned_customer] = 
+            await getOfficerStatistics(parsedStartDate, parsedEndDate, parsedProductType);
+        
+        const finalStats = basicStats.map(officer => ({
+            officer_id: officer.officer_id,
+            userName: officer.userName,
+            fullName: officer.fullName,
+            statistics: {
+                totalContactedCount: parseInt(officer.total_contacted) || 0,
+                totalNotContactedCount: parseInt(officer.total_not_contacted) || 0,
+                uniqueContactedLoansCount: parseInt(officer.unique_contacted_loans) || 0,
+                uniqueNotContactedLoansCount: parseInt(officer.unique_not_contacted_loans) || 0,
+                totalUniqueLoans: parseInt(officer.total_unique_loans) || 0,
+                neverContactedLoansCount: parseInt(neverContacted.find(nc => nc.officer_id === officer.officer_id)?.count || 0)
+            },
+            collection_summary: collectionSummary.find(cs => cs.officer_id === officer.officer_id) || {
+                total_collected_per_user: 0,
+                total_penalty_collected_per_user: 0,
+                total_principal_collected_per_user: 0,
+                total_interest_collected_per_user: 0
+            },
+            assigned_customer: assigned_customer.find(cs => cs.officer_id === officer.officer_id) || {
+                total_assigned_customer: 0,
+                total_due_amount: 0
+            }
+        }));
+
+        return res.status(200).json({
+            data: {
+                statistics: finalStats
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching collection statistics:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
 module.exports = {
     getCollectionStatistics,
-    getCollectionStatisticsPerUser
+    getCollectionStatisticsPerUser, 
+    getRecoveryCollectionStatisticsPerUser
 };

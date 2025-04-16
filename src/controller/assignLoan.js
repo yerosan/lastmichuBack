@@ -2,6 +2,7 @@ const { Model, where } = require("sequelize");
 const { Op, Sequelize } = require("sequelize");
 const { AssignedLoans, DueLoanData, ActiveOfficers, UserInformations, CustomerInteraction, Payment,DistrictList, BranchList } = require("../models");
 const _ = require("lodash");
+const { contentSecurityPolicy } = require("helmet");
 
 const assignLoans = async (req, res) => {
     let data = req.body;
@@ -532,4 +533,169 @@ const getUserAssignedLoansHistory = async (req, res) => {
 };
 
 
-module.exports = { assignLoans , getAssignedLoans, getUserAssignedLoans,getUserAssignedLoansHistory};
+
+
+const nplAssigned = async (req, res) => {
+    try {
+        const { startDate, endDate, product, officerId, team } = req.query;
+
+        console.log("Received query parameters:", req.query)
+
+        let whereConditions = {};
+        
+        if (startDate && endDate) {
+            whereConditions.assigned_date = {
+                [Op.between]: [startDate, endDate]
+            };
+        } else if (startDate) {
+            whereConditions.assigned_date = {
+                [Op.gte]: startDate
+            };
+        }
+
+        if (product) whereConditions['$loan.product_type$'] = product;
+        if (officerId) whereConditions.officer_id = officerId;
+        if (team) whereConditions['$officer.team$'] = team;
+
+        // Get overall statistics
+        const overallStats = await AssignedLoans.findAll({
+            attributes: [
+                [Sequelize.fn('COUNT', Sequelize.col('AssignedLoans.loan_id')), 'total_assigned'],
+                [Sequelize.fn('SUM', Sequelize.col('loan.outstanding_balance')), 'total_outstanding']
+            ],
+            include: [
+                {
+                    model: DueLoanData,
+                    as: 'loan',
+                    attributes: [],
+                    required: false
+                }
+            ],
+            where: whereConditions,
+            raw: true
+        });
+
+        // Get per user statistics
+        const perUserStats = await AssignedLoans.findAll({
+            attributes: [
+                'officer_id',
+                [Sequelize.fn('COUNT', Sequelize.col('AssignedLoans.loan_id')), 'assigned_count'],
+                [Sequelize.fn('SUM', Sequelize.col('loan.outstanding_balance')), 'total_outstanding']
+            ],
+            include: [
+                {
+                    model: DueLoanData,
+                    as: 'loan',
+                    attributes: [],
+                    required: false
+                },
+                {
+                    model: ActiveOfficers,
+                    as: 'officer',
+                    attributes: ['team'],
+                    required: false,
+                    include: {
+                        model: UserInformations,
+                        as: 'userInfos',
+                        attributes: ['userName', 'fullName'],
+                        required: false
+                    }
+                }
+            ],
+            where: whereConditions,
+            group: [
+                'AssignedLoans.officer_id',
+                'officer.team',
+                'officer.userInfos.userName',
+                'officer.userInfos.fullName'
+            ],
+            raw: true,
+            nest: true
+        });
+
+        // Get per product statistics
+        const perProductStats = await AssignedLoans.findAll({
+            attributes: [
+                [Sequelize.col('loan.product_type'), 'product'],
+                [Sequelize.fn('COUNT', Sequelize.col('AssignedLoans.loan_id')), 'assigned_count'],
+                [Sequelize.fn('SUM', Sequelize.col('loan.outstanding_balance')), 'total_outstanding']
+            ],
+            include: [
+                {
+                    model: DueLoanData,
+                    as: 'loan',
+                    attributes: [],
+                    required: false
+                }
+            ],
+            where: whereConditions,
+            group: ['loan.product_type'],
+            raw: true
+        });
+
+        // Get detailed customer list
+        const customerList = await AssignedLoans.findAll({
+            attributes: [
+                'loan_id',
+                'officer_id',
+                'assigned_date',
+                'customer_phone'
+            ],
+            include: [
+                {
+                    model: DueLoanData,
+                    as: 'loan',
+                    attributes: [
+                        'customer_name',
+                        'product_type',
+                        'outstanding_balance',
+                    ],
+                    required: false
+                },
+                {
+                    model: ActiveOfficers,
+                    as: 'officer',
+                    attributes: ['team'],
+                    required: false,
+                    include: {
+                        model: UserInformations,
+                        as: 'userInfos',
+                        attributes: ['userName', 'fullName'],
+                        required: false
+                    }
+                }
+            ],
+            where: whereConditions,
+            order: [['assigned_date', 'DESC']],
+            raw: true,
+            nest: true
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                overall: overallStats[0],
+                perUser: perUserStats,
+                perProduct: perProductStats,
+                customerList: customerList
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in nplAssigned:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
+module.exports = { assignLoans , getAssignedLoans,
+     getUserAssignedLoans,getUserAssignedLoansHistory,
+     nplAssigned
+    };
